@@ -11,6 +11,10 @@
       "types": "./src/derive.ts",
       "import": "./src/derive.ts"
     },
+    "./impact": {
+      "types": "./src/impact.ts",
+      "import": "./src/impact.ts"
+    },
     "./workspace": {
       "types": "./src/workspace.ts",
       "import": "./src/workspace.ts"
