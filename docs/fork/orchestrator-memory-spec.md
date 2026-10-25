@@ -537,6 +537,14 @@ Os losangos marcam os gates; a ordem das fases é sequencial porque cada uma dep
 6. **Sistema operacional** alvo da primeira versão (Linux, macOS ou Windows) e se o app desktop também deve ser suportado desde a Fase 1.
 7. **Nome e distribuição** do fork (nome próprio, `npx`, app desktop).
 
+### 11.0 Medições da Fase 0
+
+| Medição                                                                        | Resultado                                                                                 | Consequência                                                                                                                                                                        |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Latência de `claude -p --model haiku` por chamada (3 execuções, mesma máquina) | 7,5 a 7,8 s, sem diferença entre a primeira e as seguintes                                | O classificador por CLI não cabe no p95 < 3 s (A2) nem no `timeout_ms = 5000`. O router síncrono fica em `lexical-only`; o LLM só serve a tarefas em segundo plano, como a extração |
+| Ollama                                                                         | Não instalado nesta máquina                                                               | Alternativa local só depois de instalar e medir                                                                                                                                     |
+| Conjunto dourado de roteamento                                                 | 95 prompts: 63 reais (76% de um projeto) e 32 sintéticos em 8 projetos, em `~/t3-golden/` | Abaixo dos 100 previstos; ver decisão 8                                                                                                                                             |
+
 ### 11.1 Decisões tomadas
 
 Registradas na revisão com o autor; substituem os padrões propostos anteriores.
