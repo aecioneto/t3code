@@ -3,6 +3,14 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./extract": {
+      "types": "./src/extract.ts",
+      "import": "./src/extract.ts"
+    },
+    "./redact": {
+      "types": "./src/redact.ts",
+      "import": "./src/redact.ts"
+    },
     "./block": {
       "types": "./src/block.ts",
       "import": "./src/block.ts"
