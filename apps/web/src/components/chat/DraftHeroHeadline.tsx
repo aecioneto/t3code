@@ -40,7 +40,7 @@ import {
 } from "../ui/combobox";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { InlineButton } from "../ui/button";
-import { routerRecordChoice } from "~/state/router";
+import { routerRecordChoice, routerRecordWorkspaceChoice } from "~/state/router";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { DraftProjectName } from "./DraftProjectName";
 import { ROUTER_MIN_PROMPT_CHARS } from "./routerSuggestion.logic";
@@ -99,6 +99,11 @@ export function DraftHeroHeadline({
     draftId ? (store.getDraftThread(draftId)?.envMode ?? "local") : "local",
   );
   const setDraftThreadContext = useComposerDraftStore((store) => store.setDraftThreadContext);
+  const recordWorkspaceChoice = useAtomCommand(routerRecordWorkspaceChoice, {
+    reportFailure: false,
+    reportDefect: false,
+  });
+  const [dismissedWorkspacePrompt, setDismissedWorkspacePrompt] = useState<string | null>(null);
   const workspaceSuggestion = useWorkspaceSuggestion({
     environmentId: activeProjectRef?.environmentId ?? null,
     projectId: activeProjectRef?.projectId ?? null,
@@ -247,6 +252,24 @@ export function DraftHeroHeadline({
         prompt,
         suggestedProjectId: routerSuggestion?.projectId ?? activeProjectRef.projectId,
         chosenProjectId: project.id,
+      },
+    });
+  };
+  // Both answers are recorded: agreement is measured against what the user actually kept.
+  const answerWorkspace = (chosen: "current" | "worktree") => {
+    if (workspaceSuggestion === null || activeProjectRef === null) {
+      return;
+    }
+    void recordWorkspaceChoice({
+      environmentId: activeProjectRef.environmentId,
+      input: {
+        projectId: activeProjectRef.projectId,
+        prompt: draftPrompt.trim(),
+        nature: workspaceSuggestion.nature,
+        filesEstimate: workspaceSuggestion.filesEstimate,
+        layers: workspaceSuggestion.layers,
+        suggested: workspaceSuggestion.envMode === "worktree" ? "worktree" : "current",
+        chosen: chosen === "worktree" ? "worktree" : "current",
       },
     });
   };
@@ -433,23 +456,37 @@ export function DraftHeroHeadline({
           </InlineButton>
         </p>
       )}
-      {workspaceSuggestion === null || draftId === null ? null : (
-        <p className="mt-2 flex h-6 w-full items-center justify-center text-sm">
+      {workspaceSuggestion === null ||
+      draftId === null ||
+      activeProjectRef === null ||
+      dismissedWorkspacePrompt === draftPrompt.trim() ? null : (
+        <p className="mt-2 flex h-6 w-full items-center justify-center gap-2 text-sm">
           <InlineButton
             tone="muted"
             className="pointer-events-auto"
-            onClick={() =>
+            onClick={() => {
+              answerWorkspace(workspaceSuggestion.envMode === "worktree" ? "worktree" : "current");
               setDraftThreadContext(draftId, {
                 envMode: workspaceSuggestion.envMode,
                 ...(workspaceSuggestion.envMode === "worktree" ? { worktreePath: null } : {}),
-              })
-            }
+              });
+            }}
           >
             {workspaceSuggestion.ask
               ? `Unsure (${workspaceSuggestion.reason}). ${workspaceSuggestion.envMode === "worktree" ? "Try a new worktree" : "Work in the current checkout"}`
               : workspaceSuggestion.envMode === "worktree"
                 ? `Looks like ${workspaceSuggestion.reason}. Use a new worktree`
                 : `Looks like ${workspaceSuggestion.reason}. Work in the current checkout`}
+          </InlineButton>
+          <InlineButton
+            tone="muted"
+            className="pointer-events-auto"
+            onClick={() => {
+              answerWorkspace(draftEnvMode === "worktree" ? "worktree" : "current");
+              setDismissedWorkspacePrompt(draftPrompt.trim());
+            }}
+          >
+            Keep mine
           </InlineButton>
         </p>
       )}

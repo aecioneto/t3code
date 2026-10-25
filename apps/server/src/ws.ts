@@ -2390,6 +2390,13 @@ export const layerWsRpc = (
         [WS_METHODS.memoryCreate]: memoryRpc.create,
         [WS_METHODS.memoryUpdate]: memoryRpc.update,
         [WS_METHODS.memoryDelete]: memoryRpc.delete,
+        [WS_METHODS.routerRecordWorkspaceChoice]: (input) =>
+          router.recordWorkspaceChoice({ ...input, projectId: input.projectId }).pipe(
+            Effect.as({}),
+            Effect.mapError(
+              (cause) => new RouterError({ operation: "recordWorkspaceChoice", cause }),
+            ),
+          ),
         [WS_METHODS.routerPlanWorkspace]: (input) =>
           workspacePlan
             .plan(input)

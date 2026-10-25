@@ -49,6 +49,9 @@ describe("pickWorkspaceSuggestion", () => {
       envMode: "worktree",
       reason: "a new feature",
       ask: false,
+      nature: "feature",
+      filesEstimate: 3,
+      layers: 1,
     });
   });
 

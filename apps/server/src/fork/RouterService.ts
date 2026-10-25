@@ -36,6 +36,10 @@ export class RouterService extends Context.Service<
       readonly suggestedProjectId: string | null;
       readonly chosenProjectId: string;
     }) => Effect.Effect<void, RouterStore.RouterStoreError>;
+    /** Records whether the user followed the workspace recommendation, to measure agreement. */
+    readonly recordWorkspaceChoice: (
+      input: Omit<RouterStore.WorkspaceFeedback, "createdAt">,
+    ) => Effect.Effect<void, RouterStore.RouterStoreError>;
   }
 >()("t3/fork/RouterService") {}
 
@@ -100,7 +104,14 @@ const make = Effect.fn("RouterService.make")(function* (thresholds: RouterThresh
     yield* store.recordFeedback({ ...input, createdAt });
   });
 
-  return RouterService.of({ classify, recordChoice });
+  const recordWorkspaceChoice = Effect.fn("RouterService.recordWorkspaceChoice")(function* (
+    input: Omit<RouterStore.WorkspaceFeedback, "createdAt">,
+  ) {
+    const createdAt = DateTime.formatIso(yield* DateTime.now);
+    yield* store.recordWorkspaceFeedback({ ...input, createdAt });
+  });
+
+  return RouterService.of({ classify, recordChoice, recordWorkspaceChoice });
 });
 
 export const layer = (thresholds: RouterThresholds = DEFAULT_THRESHOLDS) =>

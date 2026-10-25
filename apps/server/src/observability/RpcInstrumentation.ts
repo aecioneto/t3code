@@ -88,6 +88,7 @@ const RPC_AGGREGATES = {
   [WS_METHODS.routerClassify]: "router",
   [WS_METHODS.routerRecordChoice]: "router",
   [WS_METHODS.routerPlanWorkspace]: "router",
+  [WS_METHODS.routerRecordWorkspaceChoice]: "router",
   [WS_METHODS.memoryList]: "memory",
   [WS_METHODS.memoryCreate]: "memory",
   [WS_METHODS.memoryUpdate]: "memory",

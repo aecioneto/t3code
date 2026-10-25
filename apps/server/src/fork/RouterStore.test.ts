@@ -58,3 +58,34 @@ it.effect("returns the most recent routing feedback first", () =>
     assert.equal(recent[0]?.suggestedProjectId, "p2");
   }).pipe(Effect.provide(layer)),
 );
+
+it.effect("keeps workspace feedback, newest first, with what the router saw", () =>
+  Effect.gen(function* () {
+    const store = yield* RouterStore.RouterStore;
+    const base = {
+      projectId: "p1",
+      nature: "feature",
+      layers: 2,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    };
+    yield* store.recordWorkspaceFeedback({
+      ...base,
+      prompt: "adicione login",
+      filesEstimate: 7,
+      suggested: "worktree",
+      chosen: "worktree",
+    });
+    yield* store.recordWorkspaceFeedback({
+      ...base,
+      prompt: "corrija o título",
+      filesEstimate: null,
+      suggested: "current",
+      chosen: "worktree",
+    });
+    const [latest, older] = yield* store.recentWorkspaceFeedback({ limit: 5 });
+    assert.equal(latest?.prompt, "corrija o título");
+    assert.equal(latest?.filesEstimate, null);
+    assert.equal(older?.chosen, "worktree");
+    assert.equal(older?.filesEstimate, 7);
+  }).pipe(Effect.provide(layer)),
+);

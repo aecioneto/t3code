@@ -21,6 +21,7 @@ import {
   RouterError,
   RouterPlanWorkspaceInput,
   RouterRecordChoiceInput,
+  RouterRecordWorkspaceChoiceInput,
   RouterWorkspacePlan,
 } from "./router.ts";
 import {
@@ -430,6 +431,7 @@ export const WS_METHODS = {
   routerClassify: "router.classify",
   routerRecordChoice: "router.recordChoice",
   routerPlanWorkspace: "router.planWorkspace",
+  routerRecordWorkspaceChoice: "router.recordWorkspaceChoice",
   memoryList: "memory.list",
   memoryCreate: "memory.create",
   memoryUpdate: "memory.update",
@@ -1371,6 +1373,12 @@ const WsRouterPlanWorkspaceRpc = Rpc.make(WS_METHODS.routerPlanWorkspace, {
   error: Schema.Union([RouterError, EnvironmentAuthorizationError]),
 });
 
+const WsRouterRecordWorkspaceChoiceRpc = Rpc.make(WS_METHODS.routerRecordWorkspaceChoice, {
+  payload: RouterRecordWorkspaceChoiceInput,
+  success: Schema.Struct({}),
+  error: Schema.Union([RouterError, EnvironmentAuthorizationError]),
+});
+
 const WsRouterRecordChoiceRpc = Rpc.make(WS_METHODS.routerRecordChoice, {
   payload: RouterRecordChoiceInput,
   success: Schema.Struct({}),
@@ -2027,6 +2035,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsRouterClassifyRpc,
   WsRouterRecordChoiceRpc,
   WsRouterPlanWorkspaceRpc,
+  WsRouterRecordWorkspaceChoiceRpc,
   WsMemoryListRpc,
   WsMemoryCreateRpc,
   WsMemoryUpdateRpc,

@@ -35,12 +35,29 @@ const ProfileRow = Schema.Struct({
   keywords: JsonList,
 });
 
+export interface WorkspaceFeedback {
+  readonly projectId: string;
+  readonly prompt: string;
+  readonly nature: string;
+  readonly filesEstimate: number | null;
+  readonly layers: number;
+  readonly suggested: "current" | "worktree";
+  readonly chosen: "current" | "worktree";
+  readonly createdAt: string;
+}
+
 export class RouterStore extends Context.Service<
   RouterStore,
   {
     readonly upsertProfile: (profile: ProjectProfile) => Effect.Effect<void, RouterStoreError>;
     readonly listProfiles: () => Effect.Effect<ReadonlyArray<ProjectProfile>, RouterStoreError>;
     readonly recordFeedback: (feedback: RoutingFeedback) => Effect.Effect<void, RouterStoreError>;
+    readonly recordWorkspaceFeedback: (
+      feedback: WorkspaceFeedback,
+    ) => Effect.Effect<void, RouterStoreError>;
+    readonly recentWorkspaceFeedback: (input: {
+      readonly limit: number;
+    }) => Effect.Effect<ReadonlyArray<WorkspaceFeedback>, RouterStoreError>;
     readonly recentFeedback: (input: {
       readonly limit: number;
     }) => Effect.Effect<ReadonlyArray<RoutingFeedback>, RouterStoreError>;
@@ -127,6 +144,52 @@ const make = Effect.gen(function* () {
     );
   });
 
+  const recordWorkspaceFeedback = Effect.fn("RouterStore.recordWorkspaceFeedback")(function* (
+    feedback: WorkspaceFeedback,
+  ) {
+    yield* sql`
+      INSERT INTO workspace_feedback (
+        project_id, prompt, nature, files_estimate, layers, suggested, chosen, created_at
+      ) VALUES (
+        ${feedback.projectId}, ${feedback.prompt}, ${feedback.nature}, ${feedback.filesEstimate},
+        ${feedback.layers}, ${feedback.suggested}, ${feedback.chosen}, ${feedback.createdAt}
+      )
+    `.pipe(
+      Effect.mapError(
+        (cause) => new RouterStoreError({ operation: "recordWorkspaceFeedback", cause }),
+      ),
+    );
+  });
+
+  const recentWorkspaceFeedback = Effect.fn("RouterStore.recentWorkspaceFeedback")(
+    function* (input: { readonly limit: number }) {
+      const rows = yield* sql<{
+        readonly project_id: string;
+        readonly prompt: string;
+        readonly nature: string;
+        readonly files_estimate: number | null;
+        readonly layers: number;
+        readonly suggested: "current" | "worktree";
+        readonly chosen: "current" | "worktree";
+        readonly created_at: string;
+      }>`SELECT * FROM workspace_feedback ORDER BY id DESC LIMIT ${input.limit}`.pipe(
+        Effect.mapError(
+          (cause) => new RouterStoreError({ operation: "recentWorkspaceFeedback", cause }),
+        ),
+      );
+      return rows.map((row): WorkspaceFeedback => ({
+        projectId: row.project_id,
+        prompt: row.prompt,
+        nature: row.nature,
+        filesEstimate: row.files_estimate,
+        layers: row.layers,
+        suggested: row.suggested,
+        chosen: row.chosen,
+        createdAt: row.created_at,
+      }));
+    },
+  );
+
   const recentFeedback = Effect.fn("RouterStore.recentFeedback")(function* (input: {
     readonly limit: number;
   }) {
@@ -135,7 +198,14 @@ const make = Effect.gen(function* () {
     );
   });
 
-  return RouterStore.of({ upsertProfile, listProfiles, recordFeedback, recentFeedback });
+  return RouterStore.of({
+    upsertProfile,
+    listProfiles,
+    recordFeedback,
+    recordWorkspaceFeedback,
+    recentWorkspaceFeedback,
+    recentFeedback,
+  });
 });
 
 export const layer = Layer.effect(RouterStore, make);

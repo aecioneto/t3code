@@ -33,7 +33,12 @@ export const RouterRecordChoiceInput = Schema.Struct({
 export type RouterRecordChoiceInput = typeof RouterRecordChoiceInput.Type;
 
 export class RouterError extends Schema.TaggedError<RouterError>()("RouterError", {
-  operation: Schema.Literals(["classify", "recordChoice", "planWorkspace"]),
+  operation: Schema.Literals([
+    "classify",
+    "recordChoice",
+    "planWorkspace",
+    "recordWorkspaceChoice",
+  ]),
   cause: Schema.optional(Schema.Defect()),
 }) {
   override get message(): string {
@@ -66,3 +71,14 @@ export const RouterWorkspacePlan = Schema.Struct({
   }),
 });
 export type RouterWorkspacePlan = typeof RouterWorkspacePlan.Type;
+
+export const RouterRecordWorkspaceChoiceInput = Schema.Struct({
+  projectId: ProjectId,
+  prompt: Schema.String.check(Schema.isMaxLength(MAX_PROMPT_CHARS)),
+  nature: Schema.String.check(Schema.isMaxLength(40)),
+  filesEstimate: Schema.NullOr(Schema.Int),
+  layers: Schema.Int,
+  suggested: Schema.Literals(["current", "worktree"]),
+  chosen: Schema.Literals(["current", "worktree"]),
+});
+export type RouterRecordWorkspaceChoiceInput = typeof RouterRecordWorkspaceChoiceInput.Type;

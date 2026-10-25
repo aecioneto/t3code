@@ -17,3 +17,8 @@ export const routerPlanWorkspace = createEnvironmentRpcCommand(connectionAtomRun
   label: "environment-command:router:plan-workspace",
   tag: WS_METHODS.routerPlanWorkspace,
 });
+
+export const routerRecordWorkspaceChoice = createEnvironmentRpcCommand(connectionAtomRuntime, {
+  label: "environment-command:router:record-workspace-choice",
+  tag: WS_METHODS.routerRecordWorkspaceChoice,
+});
