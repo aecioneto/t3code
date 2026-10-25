@@ -1,0 +1,23 @@
+{
+  "name": "@t3tools/router",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./profile": {
+      "types": "./src/profile.ts",
+      "import": "./src/profile.ts"
+    },
+    "./route": {
+      "types": "./src/route.ts",
+      "import": "./src/route.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vp test run --config ../../vite.config.ts --dir ."
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}
