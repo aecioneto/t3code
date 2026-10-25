@@ -12,7 +12,6 @@ import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 
 import * as ServerSettings from "../serverSettings.ts";
-import * as ForkDatabase from "./ForkDatabase.ts";
 import * as MemoryStore from "./MemoryStore.ts";
 
 export class MemoryRejectedError extends Schema.TaggedError<MemoryRejectedError>()(
@@ -192,6 +191,4 @@ const make = Effect.gen(function* () {
 export const layer = Layer.effect(MemoryService, make);
 
 // The database client stays inside this layer; the main SqlClient is not shared.
-export const layerProduction = layer.pipe(
-  Layer.provide(MemoryStore.layer.pipe(Layer.provide(ForkDatabase.layerConfig))),
-);
+export const layerProduction = layer.pipe(Layer.provide(MemoryStore.layerProduction));

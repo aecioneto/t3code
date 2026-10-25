@@ -12,6 +12,8 @@ import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 import * as SqlClient from "effect/sql/SqlClient";
 
+import * as ForkDatabase from "./ForkDatabase.ts";
+
 export class MemoryStoreError extends Schema.TaggedError<MemoryStoreError>()("MemoryStoreError", {
   operation: Schema.String,
   cause: Schema.Defect(),
@@ -111,6 +113,8 @@ export class MemoryStore extends Context.Service<
     /** Deletes the memory and its search entry for good; only the audit event remains. */
     readonly forget: (id: number) => Effect.Effect<void, MemoryStoreError | MemoryNotFoundError>;
     readonly forgetProject: (projectId: string) => Effect.Effect<number, MemoryStoreError>;
+    /** Projects that own at least one memory. */
+    readonly projectIds: () => Effect.Effect<ReadonlyArray<string>, MemoryStoreError>;
     readonly list: (input: {
       readonly projectId: string | null;
       readonly kind?: MemoryKind;
@@ -250,6 +254,13 @@ const make = Effect.gen(function* () {
     return rows.length;
   });
 
+  const projectIds = Effect.fn("MemoryStore.projectIds")(function* () {
+    const rows = yield* sql<{ readonly project_id: string }>`
+      SELECT DISTINCT project_id FROM memories WHERE project_id IS NOT NULL
+    `;
+    return rows.map((row) => row.project_id);
+  });
+
   const list = Effect.fn("MemoryStore.list")(function* (input: {
     readonly projectId: string | null;
     readonly kind?: MemoryKind;
@@ -328,9 +339,12 @@ const make = Effect.gen(function* () {
       ),
     forgetProject: (projectId) =>
       forgetProject(projectId).pipe(Effect.mapError(storeError("forgetProject"))),
+    projectIds: () => projectIds().pipe(Effect.mapError(storeError("projectIds"))),
     list: (input) => list(input).pipe(Effect.mapError(storeError("list"))),
     search: (input) => search(input).pipe(Effect.mapError(storeError("search"))),
   });
 });
 
 export const layer = Layer.effect(MemoryStore, make);
+
+export const layerProduction = layer.pipe(Layer.provide(ForkDatabase.layerConfig));

@@ -6,7 +6,9 @@ import * as GitVcsDriver from "../vcs/GitVcsDriver.ts";
 import * as OrchestrationCommandReceipts from "../persistence/OrchestrationCommandReceipts.ts";
 import * as OrchestrationEventStore from "../persistence/OrchestrationEventStore.ts";
 import * as McpAppModelContext from "../mcpApps/McpAppModelContext.ts";
+import * as MemoryPurge from "../fork/MemoryPurge.ts";
 import * as MemoryService from "../fork/MemoryService.ts";
+import * as MemoryStore from "../fork/MemoryStore.ts";
 import * as RouterService from "../fork/RouterService.ts";
 import * as McpAppRequests from "../mcpApps/McpAppRequests.ts";
 import * as ProviderSessionRuntime from "../persistence/ProviderSessionRuntime.ts";
@@ -371,6 +373,10 @@ export const layerProduction = Layer.mergeAll(
   layerSecretRequestsProvided,
   RouterService.layerProduction.pipe(Layer.provide(layerProjectService)),
   MemoryService.layerProduction,
+  MemoryPurge.layer.pipe(
+    Layer.provide(MemoryStore.layerProduction),
+    Layer.provide(layerProjectService),
+  ),
   GuestShareService.layer.pipe(
     Layer.provide(Layer.merge(layerOrchestratorProvided, layerCommandOutputHubProvided)),
   ),
