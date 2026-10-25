@@ -6,6 +6,7 @@ import { hasCloudPublicConfig } from "~/cloud/publicConfig";
 import { useT3ConnectAuthPrompt } from "../clerk/useT3ConnectAuthPrompt";
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
+import { ProjectMemorySettings } from "./ProjectMemorySettings";
 import { ScopedSwitch } from "./ScopedSwitch";
 import {
   SettingResetButton,
@@ -65,6 +66,9 @@ export function BetaSettingsPanel() {
         />
         {/* Clerk is only mounted when this build has T3 Connect. */}
         {hasCloudPublicConfig() ? <GuestLinksRowWithSignIn /> : <GuestLinksRow />}
+      </SettingsSection>
+      <SettingsSection id="project-memory" title="Project memory">
+        <ProjectMemorySettings />
       </SettingsSection>
     </SettingsPageContainer>
   );
