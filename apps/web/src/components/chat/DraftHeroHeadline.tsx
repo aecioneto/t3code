@@ -40,7 +40,10 @@ import {
 } from "../ui/combobox";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { InlineButton } from "../ui/button";
+import { routerRecordChoice } from "~/state/router";
+import { useAtomCommand } from "~/state/use-atom-command";
 import { DraftProjectName } from "./DraftProjectName";
+import { useRouterSuggestion } from "./useRouterSuggestion";
 import { DraftHeroProjectHeading } from "./DraftHeroProjectHeading";
 import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
 
@@ -78,6 +81,18 @@ export function DraftHeroHeadline({
   const { scratchEnvironmentId, scratchWorkspaceRootFor, openScratchProject } = useScratchProject();
   const openProjectDraft = useNewThreadHandler();
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
+  const draftPrompt = useComposerDraftStore((store) =>
+    draftId ? (store.getComposerDraft(draftId)?.prompt ?? "") : "",
+  );
+  const recordRouterChoice = useAtomCommand(routerRecordChoice, {
+    reportFailure: false,
+    reportDefect: false,
+  });
+  const routerSuggestion = useRouterSuggestion({
+    environmentId: activeProjectRef?.environmentId ?? null,
+    prompt: draftPrompt,
+    activeProjectId: activeProjectRef?.projectId ?? null,
+  });
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerQuery, setPickerQuery] = useState("");
   const pickerFilter = useComboboxFilter();
@@ -199,6 +214,31 @@ export function DraftHeroHeadline({
         });
       }
     }
+  };
+  const suggestedProject =
+    routerSuggestion === null || activeProjectRef === null
+      ? null
+      : (projects.find(
+          (project) =>
+            project.environmentId === activeProjectRef.environmentId &&
+            project.id === routerSuggestion.projectId,
+        ) ?? null);
+  const acceptRouterSuggestion = () => {
+    if (suggestedProject === null || activeProjectRef === null) {
+      return;
+    }
+    void recordRouterChoice({
+      environmentId: activeProjectRef.environmentId,
+      input: {
+        prompt: draftPrompt.trim(),
+        suggestedProjectId: suggestedProject.id,
+        chosenProjectId: suggestedProject.id,
+      },
+    });
+    selectProject(
+      suggestedProject,
+      deriveLogicalProjectKeyFromSettings(suggestedProject, projectGroupingSettings),
+    );
   };
   const startScratch = async (): Promise<boolean> => {
     if (scratchTargetEnvironmentId === null || isScratchDraft) {
@@ -353,6 +393,17 @@ export function DraftHeroHeadline({
             <>Add a project to start</>
           )}
         </h1>
+      )}
+      {suggestedProject === null ? null : (
+        <p className="mt-2 flex h-6 w-full items-center justify-center text-sm">
+          <InlineButton
+            tone="muted"
+            className="pointer-events-auto"
+            onClick={acceptRouterSuggestion}
+          >
+            Looks like {suggestedProject.title}. Switch project
+          </InlineButton>
+        </p>
       )}
       {scratchWorkspaceRoot === null ? null : (
         <p className="mt-2 flex h-6 w-full items-center justify-center text-sm">
