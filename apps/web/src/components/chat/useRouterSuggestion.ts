@@ -1,6 +1,8 @@
 import type { EnvironmentId, RouterCandidate } from "@t3tools/contracts";
+import { useAtomValue } from "@effect/atom-react";
 import { useEffect, useEffectEvent, useState } from "react";
 
+import { environmentPresentations } from "~/state/presentation";
 import { routerClassify } from "~/state/router";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { pickRouterSuggestion, ROUTER_MIN_PROMPT_CHARS } from "./routerSuggestion.logic";
@@ -19,7 +21,10 @@ export function useRouterSuggestion(input: {
   } | null>(null);
   const { environmentId, activeProjectId } = input;
   const prompt = input.prompt.trim();
-  const eligible = environmentId !== null && prompt.length >= ROUTER_MIN_PROMPT_CHARS;
+  const serverConfigs = useAtomValue(environmentPresentations.serverConfigsAtom);
+  const enabled =
+    environmentId !== null && serverConfigs.get(environmentId)?.settings.routerEnabled === true;
+  const eligible = enabled && prompt.length >= ROUTER_MIN_PROMPT_CHARS;
   const key = `${environmentId}|${activeProjectId}|${prompt}`;
 
   const runClassify = useEffectEvent(async (target: EnvironmentId, requestKey: string) => {

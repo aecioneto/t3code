@@ -354,6 +354,13 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["beta hide fold running monitoring threads inbox sidebar shelf"],
   },
   {
+    id: "project-router",
+    title: "Project suggestions",
+    to: "/settings/beta",
+    scope: "environment",
+    searchTerms: ["beta router project suggest switch draft prompt"],
+  },
+  {
     id: "guest-links",
     title: "Guest links",
     to: "/settings/beta",

@@ -49,6 +49,20 @@ export function BetaSettingsPanel() {
             />
           }
         />
+        <SettingsRow
+          serverScoped
+          {...searchableSetting("project-router")}
+          settingKeys={["routerEnabled"]}
+          description="While you write a new thread, suggest the project that fits your prompt. It only suggests; you choose whether to switch."
+          control={
+            <ScopedSwitch
+              settingKeys={["routerEnabled"]}
+              checked={settings.routerEnabled}
+              onCheckedChange={(checked) => updateSettings({ routerEnabled: Boolean(checked) })}
+              aria-label="Project suggestions"
+            />
+          }
+        />
         {/* Clerk is only mounted when this build has T3 Connect. */}
         {hasCloudPublicConfig() ? <GuestLinksRowWithSignIn /> : <GuestLinksRow />}
       </SettingsSection>
