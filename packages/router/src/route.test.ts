@@ -62,7 +62,7 @@ describe("route", () => {
 
   it("asks when no term matches any profile", () => {
     const decision = route("explique o que é um monad", profiles);
-    expect(decision).toMatchObject({ mode: "ask", confidence: 0 });
+    expect(decision).toMatchObject({ mode: "ask", confidence: 0, candidates: [] });
   });
 
   it("never reaches the auto band when the top two candidates are close", () => {

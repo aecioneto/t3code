@@ -545,6 +545,19 @@ Os losangos marcam os gates; a ordem das fases é sequencial porque cada uma dep
 | Ollama                                                                         | Não instalado nesta máquina                                                               | Alternativa local só depois de instalar e medir                                                                                                                                     |
 | Conjunto dourado de roteamento                                                 | 95 prompts: 63 reais (76% de um projeto) e 32 sintéticos em 8 projetos, em `~/t3-golden/` | Abaixo dos 100 previstos; ver decisão 8                                                                                                                                             |
 
+**Primeira medição do router léxico (Fase 1)**
+
+Com `packages/router` e perfis escritos à mão (`~/t3-golden/profiles.json`), sobre 83 prompts com projeto conhecido (51 reais e 32 sintéticos) e 10 prompts sem projeto:
+
+| Métrica                                      | Resultado                       |
+| -------------------------------------------- | ------------------------------- |
+| Responde (tem candidato com sinal)           | 40 de 83 (48%); abstém-se em 43 |
+| Acerto top-1 quando responde                 | 87,5% (35 de 40); 5 erros       |
+| Prompts sem projeto que caíram em "pergunta" | 10 de 10                        |
+| Faixa automática (≥ 0,85)                    | 0; confirmação 18; pergunta 65  |
+
+Leitura: o A1 (≥ 90%) **não foi atendido** no conjunto atual; por isso vale a decisão 16 (cartão de confirmação sempre, `auto_start = false`). O conjunto tem viés: a maioria dos prompts reais são continuações curtas ("pois é...", "create one plan") que, no uso real, vão para a thread aberta e não passam pelo router, e os perfis foram escritos por quem já conhecia os prompts. A1 precisa ser remedido sobre prompts que iniciam uma thread, com o log de decisões do router.
+
 **Pontos de contato verificados (Fase 0)**
 
 | Ponto               | Achado                                                                                                                                                                                                                                                                                                   | Impacto                                                                                                                                                                         |

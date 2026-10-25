@@ -14,6 +14,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "evaluate-golden": "node scripts/evaluate-golden.ts",
     "test": "vp test run --config ../../vite.config.ts --dir ."
   },
   "devDependencies": {

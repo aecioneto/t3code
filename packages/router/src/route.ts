@@ -86,6 +86,7 @@ export function scoreProfiles(
       }, 0);
       return { profile, score: ceiling === 0 ? 0 : Math.min(1, raw / ceiling) };
     })
+    .filter((candidate) => candidate.score > 0)
     .toSorted((left, right) => right.score - left.score)
     .slice(0, MAX_CANDIDATES);
 }
