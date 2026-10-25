@@ -19,7 +19,9 @@ import {
   RouterClassifyInput,
   RouterClassifyResult,
   RouterError,
+  RouterPlanWorkspaceInput,
   RouterRecordChoiceInput,
+  RouterWorkspacePlan,
 } from "./router.ts";
 import {
   McpAppCallToolInput,
@@ -427,6 +429,7 @@ export const WS_METHODS = {
   mcpAppsReadResource: "mcpApps.readResource",
   routerClassify: "router.classify",
   routerRecordChoice: "router.recordChoice",
+  routerPlanWorkspace: "router.planWorkspace",
   memoryList: "memory.list",
   memoryCreate: "memory.create",
   memoryUpdate: "memory.update",
@@ -1362,6 +1365,12 @@ const WsRouterClassifyRpc = Rpc.make(WS_METHODS.routerClassify, {
   error: Schema.Union([RouterError, EnvironmentAuthorizationError]),
 });
 
+const WsRouterPlanWorkspaceRpc = Rpc.make(WS_METHODS.routerPlanWorkspace, {
+  payload: RouterPlanWorkspaceInput,
+  success: RouterWorkspacePlan,
+  error: Schema.Union([RouterError, EnvironmentAuthorizationError]),
+});
+
 const WsRouterRecordChoiceRpc = Rpc.make(WS_METHODS.routerRecordChoice, {
   payload: RouterRecordChoiceInput,
   success: Schema.Struct({}),
@@ -2017,6 +2026,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsServerSignalProcessRpc,
   WsRouterClassifyRpc,
   WsRouterRecordChoiceRpc,
+  WsRouterPlanWorkspaceRpc,
   WsMemoryListRpc,
   WsMemoryCreateRpc,
   WsMemoryUpdateRpc,

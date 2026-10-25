@@ -119,6 +119,7 @@ import * as CommandOutputHub from "./orchestration-v2/CommandOutputHub.ts";
 import * as MemoryService from "./fork/MemoryService.ts";
 import { makeMemoryRpcHandlers } from "./fork/memoryRpc.ts";
 import * as RouterService from "./fork/RouterService.ts";
+import * as WorkspacePlanService from "./fork/WorkspacePlanService.ts";
 import * as McpAppRequests from "./mcpApps/McpAppRequests.ts";
 import * as ProviderSessionManager from "./orchestration-v2/ProviderSessionManager.ts";
 import * as ThreadLaunchService from "./orchestration-v2/ThreadLaunchService.ts";
@@ -1259,6 +1260,7 @@ export const layerWsRpc = (
       const providerSessionsV2 = yield* ProviderSessionManager.ProviderSessionManagerV2;
       const mcpAppRequests = yield* McpAppRequests.McpAppRequests;
       const router = yield* RouterService.RouterService;
+      const workspacePlan = yield* WorkspacePlanService.WorkspacePlanService;
       const memoryRpc = makeMemoryRpcHandlers(yield* MemoryService.MemoryService);
       const analytics = yield* AnalyticsService.AnalyticsService;
       const originProps = clientAnalyticsProps;
@@ -2388,6 +2390,12 @@ export const layerWsRpc = (
         [WS_METHODS.memoryCreate]: memoryRpc.create,
         [WS_METHODS.memoryUpdate]: memoryRpc.update,
         [WS_METHODS.memoryDelete]: memoryRpc.delete,
+        [WS_METHODS.routerPlanWorkspace]: (input) =>
+          workspacePlan
+            .plan(input)
+            .pipe(
+              Effect.mapError((cause) => new RouterError({ operation: "planWorkspace", cause })),
+            ),
         [WS_METHODS.routerClassify]: (input) =>
           router
             .classify(input)

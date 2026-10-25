@@ -1,6 +1,6 @@
 import * as Schema from "effect/Schema";
 
-import { TrimmedNonEmptyString } from "./baseSchemas.ts";
+import { ProjectId, TrimmedNonEmptyString } from "./baseSchemas.ts";
 
 const MAX_PROMPT_CHARS = 120_000;
 
@@ -33,10 +33,36 @@ export const RouterRecordChoiceInput = Schema.Struct({
 export type RouterRecordChoiceInput = typeof RouterRecordChoiceInput.Type;
 
 export class RouterError extends Schema.TaggedError<RouterError>()("RouterError", {
-  operation: Schema.Literals(["classify", "recordChoice"]),
+  operation: Schema.Literals(["classify", "recordChoice", "planWorkspace"]),
   cause: Schema.optional(Schema.Defect()),
 }) {
   override get message(): string {
     return `Router ${this.operation} failed.`;
   }
 }
+
+export const RouterPlanWorkspaceInput = Schema.Struct({
+  projectId: ProjectId,
+  prompt: Schema.String.check(Schema.isMaxLength(MAX_PROMPT_CHARS)),
+});
+export type RouterPlanWorkspaceInput = typeof RouterPlanWorkspaceInput.Type;
+
+export const RouterWorkspacePlan = Schema.Struct({
+  nature: Schema.Literals(["feature", "refactor", "migration", "fix", "investigation", "unknown"]),
+  impact: Schema.Struct({
+    files: Schema.NullOr(Schema.Int),
+    layers: Schema.Int,
+    touchesMigrations: Schema.Boolean,
+    touchesDeps: Schema.Boolean,
+  }),
+  branch: Schema.NullOr(Schema.String),
+  dirty: Schema.Boolean,
+  plan: Schema.Struct({
+    workspace: Schema.Literals(["current", "worktree", "existing_worktree"]),
+    reason: Schema.String,
+    ask: Schema.Boolean,
+    confidence: Schema.Number,
+    worktreePath: Schema.optional(Schema.String),
+  }),
+});
+export type RouterWorkspacePlan = typeof RouterWorkspacePlan.Type;

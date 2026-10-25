@@ -45,6 +45,7 @@ import * as HostResources from "./resourceTelemetry/HostResources.ts";
 import * as ManagedProjectFolders from "./project/ManagedProjectFolders.ts";
 import * as MemoryService from "./fork/MemoryService.ts";
 import * as RouterService from "./fork/RouterService.ts";
+import * as WorkspacePlanService from "./fork/WorkspacePlanService.ts";
 import * as McpAppRequests from "./mcpApps/McpAppRequests.ts";
 import * as ModelManifest from "./provider/ModelManifest.ts";
 import * as Orchestrator from "./orchestration-v2/Orchestrator.ts";
@@ -411,6 +412,7 @@ const layerUnusedConfigRpcServices = Layer.mergeAll(
   Layer.mock(McpAppRequests.McpAppRequests)({}),
   Layer.mock(RouterService.RouterService)({}),
   Layer.mock(MemoryService.MemoryService)({}),
+  Layer.mock(WorkspacePlanService.WorkspacePlanService)({}),
   Layer.mock(ModelManifest.ModelManifest)({}),
   Layer.mock(OrchestrationEventStore.OrchestrationEventStore)({}),
   Layer.mock(Orchestrator.OrchestratorV2)({}),
