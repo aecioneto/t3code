@@ -11,6 +11,10 @@
       "types": "./src/derive.ts",
       "import": "./src/derive.ts"
     },
+    "./workspace": {
+      "types": "./src/workspace.ts",
+      "import": "./src/workspace.ts"
+    },
     "./route": {
       "types": "./src/route.ts",
       "import": "./src/route.ts"
