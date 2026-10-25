@@ -85,6 +85,8 @@ const RPC_AGGREGATES = {
   [WS_METHODS.serverReportClientActivity]: "server",
   [WS_METHODS.serverReportHostPowerState]: "server",
   [WS_METHODS.serverGetBackgroundPolicy]: "server",
+  [WS_METHODS.routerClassify]: "router",
+  [WS_METHODS.routerRecordChoice]: "router",
   [WS_METHODS.scheduledTasksList]: "scheduledTasks",
   [WS_METHODS.scheduledTasksSubscribe]: "scheduledTasks",
   [WS_METHODS.scheduledTasksUpsert]: "scheduledTasks",

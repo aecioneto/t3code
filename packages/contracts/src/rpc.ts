@@ -7,6 +7,12 @@ import {
 } from "./orchestrationV2.ts";
 import { OrchestrationDispatchCommandError } from "./orchestrationDispatch.ts";
 import {
+  RouterClassifyInput,
+  RouterClassifyResult,
+  RouterError,
+  RouterRecordChoiceInput,
+} from "./router.ts";
+import {
   McpAppCallToolInput,
   McpAppCallToolResult,
   McpAppReadResourceInput,
@@ -410,6 +416,8 @@ export const WS_METHODS = {
   mcpAppsCallTool: "mcpApps.callTool",
   mcpAppsToolInfo: "mcpApps.toolInfo",
   mcpAppsReadResource: "mcpApps.readResource",
+  routerClassify: "router.classify",
+  routerRecordChoice: "router.recordChoice",
   mcpAppsUpdateModelContext: "mcpApps.updateModelContext",
 
   providerUploadFeedback: "provider.uploadFeedback",
@@ -1335,6 +1343,18 @@ const WsMcpAppsUpdateModelContextRpc = Rpc.make(WS_METHODS.mcpAppsUpdateModelCon
   error: Schema.Union([McpAppRequestError, EnvironmentAuthorizationError]),
 });
 
+const WsRouterClassifyRpc = Rpc.make(WS_METHODS.routerClassify, {
+  payload: RouterClassifyInput,
+  success: RouterClassifyResult,
+  error: Schema.Union([RouterError, EnvironmentAuthorizationError]),
+});
+
+const WsRouterRecordChoiceRpc = Rpc.make(WS_METHODS.routerRecordChoice, {
+  payload: RouterRecordChoiceInput,
+  success: Schema.Struct({}),
+  error: Schema.Union([RouterError, EnvironmentAuthorizationError]),
+});
+
 const WsMcpAppsReadResourceRpc = Rpc.make(WS_METHODS.mcpAppsReadResource, {
   payload: McpAppReadResourceInput,
   success: McpAppReadResourceResult,
@@ -1958,6 +1978,8 @@ export const WsRpcGroup = RpcGroup.make(
   WsServerGetUsageSummaryRpc,
   WsServerRefreshUsageRatesRpc,
   WsServerSignalProcessRpc,
+  WsRouterClassifyRpc,
+  WsRouterRecordChoiceRpc,
   WsScheduledTasksListRpc,
   WsScheduledTasksSubscribeRpc,
   WsScheduledTasksUpsertRpc,

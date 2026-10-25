@@ -1,9 +1,12 @@
 import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
 import * as Effect from "effect/Effect";
+import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
+import * as Path from "effect/Path";
 import * as Migrator from "effect/sql/Migrator";
 import * as SqlClient from "effect/sql/SqlClient";
 
+import * as ServerConfig from "../config.ts";
 import Migration0001 from "./migrations/001_RouterTables.ts";
 
 // Separate file from statev2.sqlite so the fork's tables never ride along with upstream migrations.
@@ -23,4 +26,17 @@ const layerSetup = Layer.effectDiscard(
 export const layerMemory = Layer.provideMerge(
   layerSetup,
   NodeSqliteClient.layer({ filename: ":memory:" }),
+);
+
+export const layerConfig = Layer.unwrap(
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const { stateDir } = yield* ServerConfig.ServerConfig;
+    yield* fs.makeDirectory(stateDir, { recursive: true });
+    return Layer.provideMerge(
+      layerSetup,
+      NodeSqliteClient.layer({ filename: path.join(stateDir, "memory.db") }),
+    );
+  }),
 );

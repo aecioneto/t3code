@@ -73,6 +73,7 @@ import {
   ProjectReadFileError,
   ProjectSearchContentsError,
   ProjectSearchEntriesError,
+  RouterError,
   ProjectWriteFileError,
   ProjectMutationError,
   ProviderUploadFeedbackError,
@@ -115,6 +116,7 @@ import * as Keybindings from "./keybindings.ts";
 import * as ExternalLauncher from "./process/externalLauncher.ts";
 import * as ThreadManagementService from "./orchestration-v2/ThreadManagementService.ts";
 import * as CommandOutputHub from "./orchestration-v2/CommandOutputHub.ts";
+import * as RouterService from "./fork/RouterService.ts";
 import * as McpAppRequests from "./mcpApps/McpAppRequests.ts";
 import * as ProviderSessionManager from "./orchestration-v2/ProviderSessionManager.ts";
 import * as ThreadLaunchService from "./orchestration-v2/ThreadLaunchService.ts";
@@ -1254,6 +1256,7 @@ export const layerWsRpc = (
 
       const providerSessionsV2 = yield* ProviderSessionManager.ProviderSessionManagerV2;
       const mcpAppRequests = yield* McpAppRequests.McpAppRequests;
+      const router = yield* RouterService.RouterService;
       const analytics = yield* AnalyticsService.AnalyticsService;
       const originProps = clientAnalyticsProps;
       const recordClientCommandAnalytics = (command: OrchestrationV2Command) => {
@@ -2378,6 +2381,15 @@ export const layerWsRpc = (
             }
             return { providers };
           }),
+        [WS_METHODS.routerClassify]: (input) =>
+          router
+            .classify(input)
+            .pipe(Effect.mapError((cause) => new RouterError({ operation: "classify", cause }))),
+        [WS_METHODS.routerRecordChoice]: (input) =>
+          router.recordChoice(input).pipe(
+            Effect.as({}),
+            Effect.mapError((cause) => new RouterError({ operation: "recordChoice", cause })),
+          ),
         [WS_METHODS.mcpAppsCallTool]: (input) => mcpAppRequests.callTool(input),
         [WS_METHODS.mcpAppsToolInfo]: (input) => mcpAppRequests.toolInfo(input),
         [WS_METHODS.mcpAppsUpdateModelContext]: (input) => mcpAppRequests.updateModelContext(input),

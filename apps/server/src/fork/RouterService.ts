@@ -4,6 +4,7 @@ import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
+import * as ForkDatabase from "./ForkDatabase.ts";
 import * as RouterStore from "./RouterStore.ts";
 
 export interface RouterCandidate {
@@ -70,3 +71,8 @@ const make = Effect.fn("RouterService.make")(function* (thresholds: RouterThresh
 
 export const layer = (thresholds: RouterThresholds = DEFAULT_THRESHOLDS) =>
   Layer.effect(RouterService, make(thresholds));
+
+// The database client stays inside this layer; the main SqlClient is not shared.
+export const layerProduction = layer().pipe(
+  Layer.provide(RouterStore.layer.pipe(Layer.provide(ForkDatabase.layerConfig))),
+);
