@@ -99,6 +99,11 @@ import * as T3ProjectFileLoader from "./project/T3ProjectFileLoader.ts";
 import * as RepositoryIdentityResolver from "./project/RepositoryIdentityResolver.ts";
 import * as WorkspaceEntries from "./workspace/WorkspaceEntries.ts";
 import * as LiveThreads from "./fork/LiveThreads.ts";
+import * as MemoryExtractionReactor from "./fork/MemoryExtractionReactor.ts";
+import * as MemoryExtractor from "./fork/MemoryExtractor.ts";
+import * as MemoryService from "./fork/MemoryService.ts";
+import * as MemoryStore from "./fork/MemoryStore.ts";
+import * as ModelClient from "./fork/ModelClient.ts";
 import * as WorkspacePlanService from "./fork/WorkspacePlanService.ts";
 import * as KnownWorkspaces from "./workspace/KnownWorkspaces.ts";
 import * as WorkspaceFileSystem from "./workspace/WorkspaceFileSystem.ts";
@@ -610,6 +615,19 @@ const layerRuntimeCoreDependenciesBase = Layer.mergeAll(
       yield* service.start();
     }),
   ).pipe(Layer.provide(DelegatedTaskQuestionReactor.layer), Layer.provide(ProjectionStoreV2.layer)),
+  Layer.effectDiscard(
+    Effect.gen(function* () {
+      const service = yield* MemoryExtractionReactor.MemoryExtractionReactor;
+      yield* service.start();
+    }),
+  ).pipe(
+    Layer.provide(MemoryExtractionReactor.layer),
+    Layer.provide(MemoryExtractor.layer),
+    Layer.provide(ModelClient.layer),
+    Layer.provide(ProcessRunner.layer),
+    Layer.provide(MemoryService.layerProduction),
+    Layer.provide(MemoryStore.layerProduction),
+  ),
   ProviderUsageLimitsIngestion.layer,
   layerProviderInstallationRefresh,
   ReplayMarkers.layer,
