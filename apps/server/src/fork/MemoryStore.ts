@@ -64,6 +64,8 @@ export interface MemoryCreateInput {
   readonly confidence?: number;
   readonly sourceThreadId?: string;
   readonly sourceProvider?: string;
+  /** The note this one replaces; it stays on record as superseded. */
+  readonly supersedesId?: number;
 }
 
 export interface MemoryPatch {
@@ -210,6 +212,14 @@ const make = Effect.gen(function* () {
     `;
     const row = inserted[0]!;
     yield* recordEvent(row.id, input.projectId, "created", input.origin, at);
+    if (input.supersedesId !== undefined) {
+      yield* sql`
+        UPDATE memories SET status = 'superseded', updated_at = ${at}
+        WHERE id = ${input.supersedesId} AND project_id IS ${input.projectId}
+      `;
+      yield* sql`UPDATE memories SET supersedes_id = ${input.supersedesId} WHERE id = ${row.id}`;
+      yield* recordEvent(input.supersedesId, input.projectId, "superseded", input.origin, at);
+    }
     return { action: "created" as const, memory: yield* toRecord(row) };
   });
 
@@ -320,7 +330,8 @@ const make = Effect.gen(function* () {
 
   return MemoryStore.of({
     get: (id) => get(id).pipe(Effect.mapError(storeError("get"))),
-    create: (input) => create(input).pipe(Effect.mapError(storeError("create"))),
+    create: (input) =>
+      sql.withTransaction(create(input)).pipe(Effect.mapError(storeError("create"))),
     update: (id, patch) =>
       update(id, patch).pipe(
         Effect.mapError(storeError("update")),

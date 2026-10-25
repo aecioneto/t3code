@@ -98,3 +98,21 @@ it.effect("pages a project's memories by id", () =>
     );
   }).pipe(Effect.provide(layer)),
 );
+
+it.effect("a superseding note replaces the old one in search but keeps it on record", () =>
+  Effect.gen(function* () {
+    const store = yield* MemoryStore.MemoryStore;
+    const { memory: old } = yield* store.create(input("p1", "Cache", "limpar tmp/cache sempre"));
+    const { memory: next } = yield* store.create({
+      ...input("p1", "Cache", "nunca limpar o cache; reinicie o spring"),
+      supersedesId: old.id,
+    });
+    const found = yield* store.search({ projectId: "p1", query: "cache", limit: 5 });
+    assert.deepEqual(
+      found.map((memory) => memory.id),
+      [next.id],
+    );
+    const [first] = yield* store.list({ projectId: "p1", status: "superseded", limit: 5 });
+    assert.equal(first?.id, old.id);
+  }).pipe(Effect.provide(layer)),
+);
