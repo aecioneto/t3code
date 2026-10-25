@@ -44,3 +44,16 @@ export function pickWorkspaceSuggestion(
     layers: result.impact.layers,
   };
 }
+
+export interface ThreadSuggestion {
+  readonly action: "send" | "queue" | "new_with_handoff";
+  readonly threadId: string;
+  readonly reason: string;
+}
+
+/** A thread that covers the request is named; a full one is named too, so the fresh start has a visible reason. */
+export function pickThreadSuggestion(result: RouterWorkspacePlan): ThreadSuggestion | null {
+  const { action, threadId, reason } = result.thread;
+  if (action === "new" || threadId === undefined) return null;
+  return { action, threadId, reason };
+}

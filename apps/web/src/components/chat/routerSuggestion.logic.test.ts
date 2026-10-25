@@ -1,7 +1,11 @@
 import type { RouterClassifyResult, RouterWorkspacePlan } from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
-import { pickRouterSuggestion, pickWorkspaceSuggestion } from "./routerSuggestion.logic";
+import {
+  pickRouterSuggestion,
+  pickThreadSuggestion,
+  pickWorkspaceSuggestion,
+} from "./routerSuggestion.logic";
 
 const result = (
   mode: RouterClassifyResult["mode"],
@@ -64,5 +68,33 @@ describe("pickWorkspaceSuggestion", () => {
 
   it("keeps the borderline flag so the chip can say it is a toss-up", () => {
     expect(pickWorkspaceSuggestion(planOf("current", true), "worktree")?.ask).toBe(true);
+  });
+});
+
+describe("pickThreadSuggestion", () => {
+  const withThread = (thread: RouterWorkspacePlan["thread"]): RouterWorkspacePlan => ({
+    ...planOf("current"),
+    thread,
+  });
+
+  it("offers an existing thread to send to or queue behind", () => {
+    expect(
+      pickThreadSuggestion(withThread({ action: "send", threadId: "t1", reason: "idle" })),
+    ).toEqual({ action: "send", threadId: "t1", reason: "idle" });
+    expect(
+      pickThreadSuggestion(withThread({ action: "queue", threadId: "t1", reason: "busy" }))?.action,
+    ).toBe("queue");
+  });
+
+  it("names a full thread so the fresh start has a visible reason", () => {
+    expect(
+      pickThreadSuggestion(
+        withThread({ action: "new_with_handoff", threadId: "t1", reason: "context is full" }),
+      )?.action,
+    ).toBe("new_with_handoff");
+  });
+
+  it("offers nothing when there is no thread to name", () => {
+    expect(pickThreadSuggestion(withThread({ action: "new", reason: "none" }))).toBeNull();
   });
 });

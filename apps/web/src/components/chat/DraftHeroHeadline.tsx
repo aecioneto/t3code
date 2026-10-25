@@ -1,7 +1,13 @@
 import type { DraftId } from "~/composerDraftStore";
 import { composerDraftHasUserContent, useComposerDraftStore } from "~/composerDraftStore";
 import { resolveEnvironmentMachineKind, type ScopedProjectRef } from "@t3tools/contracts";
-import { scopedProjectKey, scopeProjectRef } from "@t3tools/client-runtime/environment";
+import {
+  scopedProjectKey,
+  scopeProjectRef,
+  scopeThreadRef,
+} from "@t3tools/client-runtime/environment";
+import { useNavigate } from "@tanstack/react-router";
+import { buildThreadRouteParams } from "~/threadRoutes";
 import { isScratchProject } from "@t3tools/client-runtime/state/projects";
 import { FolderPlusIcon } from "lucide-react";
 import { useAtomValue } from "@effect/atom-react";
@@ -104,12 +110,21 @@ export function DraftHeroHeadline({
     reportDefect: false,
   });
   const [dismissedWorkspacePrompt, setDismissedWorkspacePrompt] = useState<string | null>(null);
-  const workspaceSuggestion = useWorkspaceSuggestion({
+  const { workspace: workspaceSuggestion, thread: threadSuggestion } = useWorkspaceSuggestion({
     environmentId: activeProjectRef?.environmentId ?? null,
     projectId: activeProjectRef?.projectId ?? null,
     prompt: draftPrompt,
     currentEnvMode: draftEnvMode,
   });
+  const navigate = useNavigate();
+  const suggestedThread =
+    threadSuggestion === null || activeProjectRef === null
+      ? null
+      : (threads.find(
+          (thread) =>
+            thread.environmentId === activeProjectRef.environmentId &&
+            thread.id === threadSuggestion.threadId,
+        ) ?? null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerQuery, setPickerQuery] = useState("");
   const pickerFilter = useComboboxFilter();
@@ -453,6 +468,28 @@ export function DraftHeroHeadline({
             onClick={acceptRouterSuggestion}
           >
             Looks like {suggestedProject.title}. Switch project
+          </InlineButton>
+        </p>
+      )}
+      {suggestedThread === null || threadSuggestion === null ? null : (
+        <p className="mt-2 flex h-6 w-full items-center justify-center gap-2 text-sm">
+          <InlineButton
+            tone="muted"
+            className="pointer-events-auto"
+            onClick={() =>
+              void navigate({
+                to: "/$environmentId/$threadId",
+                params: buildThreadRouteParams(
+                  scopeThreadRef(suggestedThread.environmentId, suggestedThread.id),
+                ),
+              })
+            }
+          >
+            {threadSuggestion.action === "send"
+              ? `"${suggestedThread.title}" already covers this. Open it`
+              : threadSuggestion.action === "queue"
+                ? `"${suggestedThread.title}" covers this but is busy. Open it`
+                : `"${suggestedThread.title}" is almost out of context, so a fresh thread is better. Open it anyway`}
           </InlineButton>
         </p>
       )}
