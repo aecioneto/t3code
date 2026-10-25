@@ -7,6 +7,10 @@
       "types": "./src/profile.ts",
       "import": "./src/profile.ts"
     },
+    "./derive": {
+      "types": "./src/derive.ts",
+      "import": "./src/derive.ts"
+    },
     "./route": {
       "types": "./src/route.ts",
       "import": "./src/route.ts"

@@ -1,9 +1,12 @@
+import { deriveProfile } from "@t3tools/router/derive";
 import { DEFAULT_THRESHOLDS, route, type RouterThresholds } from "@t3tools/router/route";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
+import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 
+import * as ProjectService from "../project/ProjectService.ts";
 import * as ForkDatabase from "./ForkDatabase.ts";
 import * as RouterStore from "./RouterStore.ts";
 
@@ -38,11 +41,42 @@ export class RouterService extends Context.Service<
 
 const make = Effect.fn("RouterService.make")(function* (thresholds: RouterThresholds) {
   const store = yield* RouterStore.RouterStore;
+  const projects = yield* ProjectService.ProjectService;
+  const fileSystem = yield* FileSystem.FileSystem;
+
+  // Profiles are derived once per project; edits made later are not overwritten.
+  const syncProfiles = Effect.fn("RouterService.syncProfiles")(function* () {
+    const shells = yield* projects
+      .listShells()
+      .pipe(
+        Effect.mapError(
+          (cause) => new RouterStore.RouterStoreError({ operation: "listProjects", cause }),
+        ),
+      );
+    const stored = yield* store.listProfiles();
+    const known = new Set(stored.map((profile) => profile.id));
+    for (const shell of shells) {
+      if (known.has(shell.id)) continue;
+      const entries = yield* fileSystem
+        .readDirectory(shell.workspaceRoot)
+        .pipe(Effect.orElseSucceed(() => []));
+      const readme = yield* Effect.firstSuccessOf(
+        ["README.md", "readme.md", "README"].map((name) =>
+          fileSystem.readFileString(`${shell.workspaceRoot}/${name}`),
+        ),
+      ).pipe(Effect.orElseSucceed(() => null));
+      yield* store.upsertProfile(
+        deriveProfile({ id: shell.id, title: shell.title, entries, readme }),
+      );
+    }
+    const live = new Set<string>(shells.map((shell) => shell.id));
+    return (yield* store.listProfiles()).filter((profile) => live.has(profile.id));
+  });
 
   const classify = Effect.fn("RouterService.classify")(function* (input: {
     readonly prompt: string;
   }) {
-    const profiles = yield* store.listProfiles();
+    const profiles = yield* syncProfiles();
     const decision = route(input.prompt, profiles, thresholds);
     return {
       mode: decision.mode,
