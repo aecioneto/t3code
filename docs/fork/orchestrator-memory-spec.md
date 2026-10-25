@@ -595,3 +595,75 @@ Registradas na revisão com o autor; substituem os padrões propostos anteriores
 | 20  | A spec fica em `docs/` do fork; o AGENTS.md do upstream não se aplica ao fork                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 Mantidos dos padrões anteriores: embeddings fora da v1; memória retroativa opt-in por projeto; memória global opt-in; distribuição a partir do repositório, sem registro na v1.
+
+## 12. Estado do fork (fim do ciclo de implementação)
+
+Branch `fork/orchestrator-memory`, 41 commits locais sobre `origin/main` (`5b354026`), 105 arquivos, cerca de 8,5 mil linhas. Nada foi enviado ao remoto. Tudo vem **desligado**: `routerEnabled = false`, `memoryEnabledProjectIds = []`, `memoryExtractor = "off"` (cobertos por teste em `packages/contracts/src/settings.test.ts`).
+
+### 12.1 Entregue
+
+| Fase | O que existe                                                                                                                                                                                                                                                            |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | Medições (11.0), fontes do conjunto dourado, pontos de contato verificados                                                                                                                                                                                              |
+| 1    | `packages/router` (menção, BM25, política de confiança); `memory.db` com perfis e `routing_feedback`; `router.classify`/`recordChoice`; perfil derivado da pasta e editável (Settings > Beta > Project names); chip de projeto no rascunho; `auto_start` fica desligado |
+| 2    | `packages/memory`; ferramentas MCP `t3_memory_*`; injeção no primeiro turno de cada thread nativa (Codex como contexto não confiável, demais com prefixo); painel e switch por projeto; limpeza de projetos apagados no início do servidor                              |
+| 3    | Planejador de workspace; estimativa de impacto; leitura de threads vivas; escolha enviar/enfileirar/nova/nova com handoff; linhas no cabeçalho do rascunho; `workspace_feedback`                                                                                        |
+| 4    | Extração por modelo (`ModelClient`, desligado), redação de segredos, validação da saída, dedupe/supersede, revisão nas 2 primeiras semanas, desfazer por thread, semente de `CLAUDE.md`/`AGENTS.md`                                                                     |
+| 5    | Espelho opcional em `AGENTS.md` (manual); edição de perfil do router                                                                                                                                                                                                    |
+
+### 12.2 Não medido ou não verificado
+
+| Item                     | Situação                                                                                                                            |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| A1 router ≥ 90%          | 87,5% quando responde, 48% de cobertura, sobre 51 prompts reais (76% de um projeto) e 32 sintéticos; viés dos perfis escritos à mão |
+| A2 latência              | Léxico não medido em milissegundos; LLM por CLI = 7,6 s, fora da meta, por isso fora do caminho síncrono                            |
+| A3 entre provedores      | Coberto por teste de serviço, **não** por execução real com Claude e Codex                                                          |
+| A4 qualidade da extração | Não medido (precisa de modelo real e threads gravadas)                                                                              |
+| A8 isolamento            | `check:changed` por mudança; suíte completa do upstream **não rodada**                                                              |
+| B1, B2, G1, G2           | Dependem de uso real; `workspace_feedback` e `routing_feedback` coletam; não há relatório de concordância                           |
+| UI                       | Nenhuma captura de tela; nenhum navegador aberto; nenhuma execução do servidor com as camadas novas                                 |
+| Duas semanas de uso real | Não feitas                                                                                                                          |
+
+### 12.2.1 Limites conhecidos
+
+- A fila de extração é em memória (reinício perde pendentes) e não há gatilho de fechamento de thread nem `thread_summaries`.
+- A limpeza de notas de projetos apagados acontece só ao iniciar o servidor.
+- O chip só informa e abre a thread sugerida; não move o texto nem enfileira.
+- O resumo "memórias salvas desta thread" existe apenas no painel.
+- Claude, ACP, Cursor e Pi recebem as notas como prefixo do primeiro prompt, não no prompt de sistema.
+- Importação a partir de transcritos do `AgentSessionScanner` não foi feita.
+- O Ollama nunca foi exercitado (não instalado).
+
+### 12.3 Desvios da spec original
+
+- `router.confirm`/`router.override` viraram `router.recordChoice`; `router.planWorkspace`, `getProfile`, `updateProfile`, `recordWorkspaceChoice` e `memory.list/create/update/delete/undoThread/seed/mirror` foram acrescentados.
+- Servidor MCP standalone ficou de fora (decisão 12).
+- `inject_budget_bytes` virou 3.500 bytes por seção; o extrator é um único campo `memoryExtractor`.
+- O classificador por LLM não é usado no router (latência).
+
+### 12.4 Pontos de contato com o upstream (para o rebase semanal)
+
+Arquivos do upstream tocados (o resto é código novo em `apps/server/src/fork/`, `apps/server/src/mcp/toolkits/memory/`, `packages/router`, `packages/memory` e arquivos novos em `apps/web` e `packages/contracts`):
+
+| Arquivo                                                                                                  | Mudança                                                           |
+| -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `packages/contracts/src/rpc.ts`, `clientRpcPermissions.ts`, `settings.ts`, `index.ts`                    | Métodos RPC `router.*` e `memory.*`; três campos de configuração  |
+| `apps/server/src/ws.ts`, `ws.test.ts`, `auth/RpcAuthorization.ts`, `observability/RpcInstrumentation.ts` | Handlers finos, escopos, categoria de instrumentação, mocks       |
+| `apps/server/src/server.ts`                                                                              | Reactor de extração e três serviços no `mergeAll` interno         |
+| `apps/server/src/orchestration-v2/runtimeLayer.ts`                                                       | `RouterService`, `MemoryService`, `MemoryPurge`                   |
+| `apps/server/src/orchestration-v2/RunExecutionService.ts`                                                | Injeção de notas no primeiro turno (`Effect.serviceOption`)       |
+| `apps/server/src/mcp/McpHttpServer.ts`                                                                   | Registro do toolkit de memória                                    |
+| `apps/server/src/orchestration-v2/Adapters/ClaudeAdapterV2.ts` (+ teste)                                 | Ferramentas de leitura na lista permitida do modo somente leitura |
+| `packages/shared/src/t3McpToolPresentation.ts`, `packages/client-runtime/src/t3ToolSummary.ts`           | Rótulos das ferramentas `t3_memory_*`                             |
+| `apps/web/src/components/chat/DraftHeroHeadline.tsx`                                                     | Chips de projeto, workspace e thread                              |
+| `apps/web/src/components/settings/BetaSettingsPanel.tsx`, `settingsSearch.ts`                            | Switch, seletor do extrator, seções de memória e nomes            |
+| `apps/server/package.json`, `pnpm-lock.yaml`                                                             | Dependências de workspace                                         |
+
+Cada novo método RPC exige tocar `rpc.ts`, `clientRpcPermissions.ts`, `RpcAuthorization.ts`, `RpcInstrumentation.ts`, `ws.ts` e o mock em `ws.test.ts`. Um toolkit MCP novo com ferramentas de leitura precisa entrar na lista de `ClaudeAdapterV2.test.ts`.
+
+### 12.5 Como ligar para testar
+
+1. Settings > Beta: ligar "Project suggestions" (chips) e, por projeto, o switch de "Project memory".
+2. Preencher "Project names" dos projetos que o router confunde.
+3. Opcional: "Write notes automatically" = Claude Haiku (o resumo do run vai à Anthropic pelo CLI).
+4. Rodar `vp run check:changed` e depois a suíte completa antes de qualquer envio.
