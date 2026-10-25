@@ -330,6 +330,21 @@ export function summarizeT3ToolCalls(
         quantity(countEntities(entityIds("cwd")), "repository", "repositories"),
       );
       break;
+    case "memory-recall":
+      label = phrase("Searched", "search", `project notes ${times}`);
+      break;
+    case "memory-write":
+      label = phrase("Saved", "save", `a project note ${times}`);
+      break;
+    case "memory-update":
+      label = phrase("Updated", "update", `a project note ${times}`);
+      break;
+    case "memory-forget":
+      label = phrase("Deleted", "delete", `a project note ${times}`);
+      break;
+    case "memory-list":
+      label = phrase("Listed", "list", `project notes ${times}`);
+      break;
     case "environment-read":
       label = phrase("Checked", "check", `environment preferences ${times}`);
       break;
