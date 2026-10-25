@@ -115,6 +115,10 @@ export class MemoryStore extends Context.Service<
     /** Deletes the memory and its search entry for good; only the audit event remains. */
     readonly forget: (id: number) => Effect.Effect<void, MemoryStoreError | MemoryNotFoundError>;
     readonly forgetProject: (projectId: string) => Effect.Effect<number, MemoryStoreError>;
+    /** When the project's first automatic note was saved; `undefined` before any. */
+    readonly firstAutoCreatedAt: (
+      projectId: string,
+    ) => Effect.Effect<string | undefined, MemoryStoreError>;
     /** Projects that own at least one memory. */
     readonly projectIds: () => Effect.Effect<ReadonlyArray<string>, MemoryStoreError>;
     readonly list: (input: {
@@ -264,6 +268,16 @@ const make = Effect.gen(function* () {
     return rows.length;
   });
 
+  const firstAutoCreatedAt = Effect.fn("MemoryStore.firstAutoCreatedAt")(function* (
+    projectId: string,
+  ) {
+    const rows = yield* sql<{ readonly first: string | null }>`
+      SELECT MIN(created_at) AS first FROM memories
+      WHERE project_id = ${projectId} AND origin = 'auto'
+    `;
+    return rows[0]?.first ?? undefined;
+  });
+
   const projectIds = Effect.fn("MemoryStore.projectIds")(function* () {
     const rows = yield* sql<{ readonly project_id: string }>`
       SELECT DISTINCT project_id FROM memories WHERE project_id IS NOT NULL
@@ -350,6 +364,8 @@ const make = Effect.gen(function* () {
       ),
     forgetProject: (projectId) =>
       forgetProject(projectId).pipe(Effect.mapError(storeError("forgetProject"))),
+    firstAutoCreatedAt: (projectId) =>
+      firstAutoCreatedAt(projectId).pipe(Effect.mapError(storeError("firstAutoCreatedAt"))),
     projectIds: () => projectIds().pipe(Effect.mapError(storeError("projectIds"))),
     list: (input) => list(input).pipe(Effect.mapError(storeError("list"))),
     search: (input) => search(input).pipe(Effect.mapError(storeError("search"))),
