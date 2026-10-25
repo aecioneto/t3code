@@ -45,6 +45,7 @@ import { useAtomCommand } from "~/state/use-atom-command";
 import { DraftProjectName } from "./DraftProjectName";
 import { ROUTER_MIN_PROMPT_CHARS } from "./routerSuggestion.logic";
 import { useRouterSuggestion } from "./useRouterSuggestion";
+import { useWorkspaceSuggestion } from "./useWorkspaceSuggestion";
 import { DraftHeroProjectHeading } from "./DraftHeroProjectHeading";
 import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
 
@@ -93,6 +94,16 @@ export function DraftHeroHeadline({
     environmentId: activeProjectRef?.environmentId ?? null,
     prompt: draftPrompt,
     activeProjectId: activeProjectRef?.projectId ?? null,
+  });
+  const draftEnvMode = useComposerDraftStore((store) =>
+    draftId ? (store.getDraftThread(draftId)?.envMode ?? "local") : "local",
+  );
+  const setDraftThreadContext = useComposerDraftStore((store) => store.setDraftThreadContext);
+  const workspaceSuggestion = useWorkspaceSuggestion({
+    environmentId: activeProjectRef?.environmentId ?? null,
+    projectId: activeProjectRef?.projectId ?? null,
+    prompt: draftPrompt,
+    currentEnvMode: draftEnvMode,
   });
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerQuery, setPickerQuery] = useState("");
@@ -419,6 +430,26 @@ export function DraftHeroHeadline({
             onClick={acceptRouterSuggestion}
           >
             Looks like {suggestedProject.title}. Switch project
+          </InlineButton>
+        </p>
+      )}
+      {workspaceSuggestion === null || draftId === null ? null : (
+        <p className="mt-2 flex h-6 w-full items-center justify-center text-sm">
+          <InlineButton
+            tone="muted"
+            className="pointer-events-auto"
+            onClick={() =>
+              setDraftThreadContext(draftId, {
+                envMode: workspaceSuggestion.envMode,
+                ...(workspaceSuggestion.envMode === "worktree" ? { worktreePath: null } : {}),
+              })
+            }
+          >
+            {workspaceSuggestion.ask
+              ? `Unsure (${workspaceSuggestion.reason}). ${workspaceSuggestion.envMode === "worktree" ? "Try a new worktree" : "Work in the current checkout"}`
+              : workspaceSuggestion.envMode === "worktree"
+                ? `Looks like ${workspaceSuggestion.reason}. Use a new worktree`
+                : `Looks like ${workspaceSuggestion.reason}. Work in the current checkout`}
           </InlineButton>
         </p>
       )}

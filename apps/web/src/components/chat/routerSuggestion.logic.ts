@@ -1,4 +1,8 @@
-import type { RouterCandidate, RouterClassifyResult } from "@t3tools/contracts";
+import type {
+  RouterCandidate,
+  RouterClassifyResult,
+  RouterWorkspacePlan,
+} from "@t3tools/contracts";
 
 export const ROUTER_MIN_PROMPT_CHARS = 12;
 
@@ -11,4 +15,21 @@ export function pickRouterSuggestion(
   const top = result.candidates[0];
   if (top === undefined || top.projectId === activeProjectId) return null;
   return top;
+}
+
+export interface WorkspaceSuggestion {
+  readonly envMode: "local" | "worktree";
+  readonly reason: string;
+  readonly ask: boolean;
+}
+
+/** Only a different environment than the draft's is worth saying; an existing worktree is not offered here. */
+export function pickWorkspaceSuggestion(
+  result: RouterWorkspacePlan,
+  currentEnvMode: "local" | "worktree",
+): WorkspaceSuggestion | null {
+  if (result.plan.workspace === "existing_worktree") return null;
+  const envMode = result.plan.workspace === "worktree" ? "worktree" : "local";
+  if (envMode === currentEnvMode) return null;
+  return { envMode, reason: result.plan.reason, ask: result.plan.ask };
 }

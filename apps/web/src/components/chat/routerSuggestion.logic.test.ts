@@ -1,7 +1,7 @@
-import type { RouterClassifyResult } from "@t3tools/contracts";
+import type { RouterClassifyResult, RouterWorkspacePlan } from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
-import { pickRouterSuggestion } from "./routerSuggestion.logic";
+import { pickRouterSuggestion, pickWorkspaceSuggestion } from "./routerSuggestion.logic";
 
 const result = (
   mode: RouterClassifyResult["mode"],
@@ -29,5 +29,36 @@ describe("pickRouterSuggestion", () => {
     expect(pickRouterSuggestion(result("confirm", "rota"), "rota")).toBeNull();
     expect(pickRouterSuggestion(result("ask", "rota"), "copiador")).toBeNull();
     expect(pickRouterSuggestion(result("confirm"), "copiador")).toBeNull();
+  });
+});
+
+const planOf = (
+  workspace: RouterWorkspacePlan["plan"]["workspace"],
+  ask = false,
+): RouterWorkspacePlan => ({
+  nature: "feature",
+  impact: { files: 3, layers: 1, touchesMigrations: false, touchesDeps: false },
+  branch: "main",
+  dirty: false,
+  plan: { workspace, reason: "a new feature", ask, confidence: 0.85 },
+});
+
+describe("pickWorkspaceSuggestion", () => {
+  it("suggests a worktree when the draft would work in place", () => {
+    expect(pickWorkspaceSuggestion(planOf("worktree"), "local")).toEqual({
+      envMode: "worktree",
+      reason: "a new feature",
+      ask: false,
+    });
+  });
+
+  it("stays quiet when the draft already matches or an existing worktree is implied", () => {
+    expect(pickWorkspaceSuggestion(planOf("worktree"), "worktree")).toBeNull();
+    expect(pickWorkspaceSuggestion(planOf("current"), "local")).toBeNull();
+    expect(pickWorkspaceSuggestion(planOf("existing_worktree"), "local")).toBeNull();
+  });
+
+  it("keeps the borderline flag so the chip can say it is a toss-up", () => {
+    expect(pickWorkspaceSuggestion(planOf("current", true), "worktree")?.ask).toBe(true);
   });
 });
