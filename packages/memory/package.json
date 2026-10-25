@@ -1,0 +1,19 @@
+{
+  "name": "@t3tools/memory",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./memory": {
+      "types": "./src/memory.ts",
+      "import": "./src/memory.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vp test run --config ../../vite.config.ts --dir ."
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

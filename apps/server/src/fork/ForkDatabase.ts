@@ -8,10 +8,11 @@ import * as SqlClient from "effect/sql/SqlClient";
 
 import * as ServerConfig from "../config.ts";
 import Migration0001 from "./migrations/001_RouterTables.ts";
+import Migration0002 from "./migrations/002_Memories.ts";
 
 // Separate file from statev2.sqlite so the fork's tables never ride along with upstream migrations.
 const runMigrations = Migrator.make({})({
-  loader: Migrator.fromRecord({ "1_RouterTables": Migration0001 }),
+  loader: Migrator.fromRecord({ "1_RouterTables": Migration0001, "2_Memories": Migration0002 }),
 });
 
 const layerSetup = Layer.effectDiscard(
