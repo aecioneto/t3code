@@ -943,6 +943,9 @@ importers:
       '@t3tools/provider-testing':
         specifier: workspace:*
         version: link:../../packages/provider-testing
+      '@t3tools/router':
+        specifier: workspace:*
+        version: link:../../packages/router
       '@t3tools/shared':
         specifier: workspace:*
         version: link:../../packages/shared
