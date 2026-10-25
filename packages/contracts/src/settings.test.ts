@@ -370,3 +370,29 @@ describe("server model preferences", () => {
     expect(decodeServerSettingsPatch(input)).toEqual(input);
   });
 });
+
+describe("fork features stay off by default", () => {
+  it("starts with no router, no memory and no extractor", () => {
+    expect(DEFAULT_SERVER_SETTINGS).toMatchObject({
+      routerEnabled: false,
+      memoryEnabledProjectIds: [],
+      memoryExtractor: "off",
+    });
+  });
+
+  it("reads settings saved before the fork fields existed", () => {
+    const decoded = decodeServerSettings({});
+    expect(decoded.routerEnabled).toBe(false);
+    expect(decoded.memoryEnabledProjectIds).toEqual([]);
+    expect(decoded.memoryExtractor).toBe("off");
+  });
+
+  it("accepts a patch that turns each feature on", () => {
+    const patch = {
+      routerEnabled: true,
+      memoryEnabledProjectIds: ["p1"],
+      memoryExtractor: "claude-haiku",
+    };
+    expect(decodeServerSettingsPatch(patch)).toEqual(patch);
+  });
+});
