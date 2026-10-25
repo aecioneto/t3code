@@ -43,6 +43,7 @@ import { InlineButton } from "../ui/button";
 import { routerRecordChoice } from "~/state/router";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { DraftProjectName } from "./DraftProjectName";
+import { ROUTER_MIN_PROMPT_CHARS } from "./routerSuggestion.logic";
 import { useRouterSuggestion } from "./useRouterSuggestion";
 import { DraftHeroProjectHeading } from "./DraftHeroProjectHeading";
 import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
@@ -223,6 +224,21 @@ export function DraftHeroHeadline({
             project.environmentId === activeProjectRef.environmentId &&
             project.id === routerSuggestion.projectId,
         ) ?? null);
+  // A pick the router did not suggest is the correction worth learning from.
+  const recordPickerChoice = (project: (typeof projects)[number]) => {
+    const prompt = draftPrompt.trim();
+    if (activeProjectRef === null || prompt.length < ROUTER_MIN_PROMPT_CHARS) {
+      return;
+    }
+    void recordRouterChoice({
+      environmentId: project.environmentId,
+      input: {
+        prompt,
+        suggestedProjectId: routerSuggestion?.projectId ?? activeProjectRef.projectId,
+        chosenProjectId: project.id,
+      },
+    });
+  };
   const acceptRouterSuggestion = () => {
     if (suggestedProject === null || activeProjectRef === null) {
       return;
@@ -283,6 +299,7 @@ export function DraftHeroHeadline({
         if (!entry || item.value === activeProjectKey) {
           return;
         }
+        recordPickerChoice(entry.targetProject);
         selectProject(entry.targetProject, entry.group.projectKey);
       }}
     >
