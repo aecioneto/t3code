@@ -103,6 +103,7 @@ export class MemoryStore extends Context.Service<
       { readonly action: "created" | "skipped"; readonly memory: MemoryRecord },
       MemoryStoreError
     >;
+    readonly get: (id: number) => Effect.Effect<MemoryRecord | undefined, MemoryStoreError>;
     readonly update: (
       id: number,
       patch: MemoryPatch,
@@ -171,6 +172,11 @@ const make = Effect.gen(function* () {
   const findRow = Effect.fn("MemoryStore.findRow")(function* (id: number) {
     const rows = yield* sql<MemoryRow>`SELECT * FROM memories WHERE id = ${id}`;
     return rows[0];
+  });
+
+  const get = Effect.fn("MemoryStore.get")(function* (id: number) {
+    const row = yield* findRow(id);
+    return row === undefined ? undefined : yield* toRecord(row);
   });
 
   const create = Effect.fn("MemoryStore.create")(function* (input: MemoryCreateInput) {
@@ -302,6 +308,7 @@ const make = Effect.gen(function* () {
     new MemoryStoreError({ operation, cause });
 
   return MemoryStore.of({
+    get: (id) => get(id).pipe(Effect.mapError(storeError("get"))),
     create: (input) => create(input).pipe(Effect.mapError(storeError("create"))),
     update: (id, patch) =>
       update(id, patch).pipe(

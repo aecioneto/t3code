@@ -51,3 +51,18 @@ export function toFtsQuery(text: string): string | null {
   );
   return terms.length === 0 ? null : terms.map((term) => `"${term}"`).join(" OR ");
 }
+
+const SECRET_PATTERNS: ReadonlyArray<RegExp> = [
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
+  /\bAKIA[0-9A-Z]{16}\b/,
+  /\bgh[pousr]_[A-Za-z0-9]{30,}\b/,
+  /\bsk-[A-Za-z0-9_-]{20,}\b/,
+  /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/,
+  /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/,
+  /(?<![A-Za-z])(?:password|passwd|senha|secret|token|api[_-]?key)\s*[:=]\s*["']?[^\s"']{8,}/i,
+];
+
+/** A cheap screen, not a guarantee: memories that match are refused instead of stored. */
+export function looksLikeSecret(text: string): boolean {
+  return SECRET_PATTERNS.some((pattern) => pattern.test(text));
+}
