@@ -1174,6 +1174,8 @@ export const ServerSettings = Schema.Struct({
   memoryEnabledProjectIds: Schema.Array(Schema.String).pipe(
     Schema.withDecodingDefault(Effect.succeed([])),
   ),
+  /** Beta (fork): model that writes notes from finished turns: `off`, `claude-<model>` or `ollama:<model>`. */
+  memoryExtractor: Schema.String.pipe(Schema.withDecodingDefault(Effect.succeed("off"))),
   sidebarAutoSettleKeepPullRequests: Schema.Boolean.pipe(
     Schema.withDecodingDefault(Effect.succeed(false)),
   ),
@@ -1521,6 +1523,7 @@ export const ServerSettingsPatch = Schema.Struct({
   guestSharingEnabled: Schema.optionalKey(Schema.Boolean),
   routerEnabled: Schema.optionalKey(Schema.Boolean),
   memoryEnabledProjectIds: Schema.optionalKey(Schema.Array(Schema.String)),
+  memoryExtractor: Schema.optionalKey(Schema.String),
   backgroundActivity: Schema.optionalKey(
     Schema.Struct({
       schemaVersion: Schema.optionalKey(Schema.Literal(1)),
