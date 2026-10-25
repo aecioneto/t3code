@@ -41,6 +41,7 @@ const planOf = (
   branch: "main",
   dirty: false,
   plan: { workspace, reason: "a new feature", ask, confidence: 0.85 },
+  thread: { action: "new", reason: "the project has no live thread" },
 });
 
 describe("pickWorkspaceSuggestion", () => {

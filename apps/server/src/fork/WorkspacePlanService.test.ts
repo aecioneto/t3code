@@ -7,6 +7,7 @@ import * as Option from "effect/Option";
 import * as ProjectService from "../project/ProjectService.ts";
 import * as GitVcsDriver from "../vcs/GitVcsDriver.ts";
 import * as WorkspaceEntries from "../workspace/WorkspaceEntries.ts";
+import * as LiveThreads from "./LiveThreads.ts";
 import * as WorkspacePlanService from "./WorkspacePlanService.ts";
 
 const projectId = ProjectId.make("p1");
@@ -17,6 +18,7 @@ const layerFor = (input: {
   readonly branch?: string | null;
   readonly dirty?: boolean;
   readonly isRepo?: boolean;
+  readonly live?: ReadonlyArray<LiveThreads.ProjectLiveThread>;
 }) =>
   WorkspacePlanService.layer.pipe(
     Layer.provide(
@@ -37,6 +39,9 @@ const layerFor = (input: {
                   })),
                   truncated: false,
                 }),
+        }),
+        Layer.mock(LiveThreads.LiveThreads)({
+          forProject: () => Effect.succeed(input.live ?? []),
         }),
         Layer.mock(GitVcsDriver.GitVcsDriver)({
           statusDetailsLocal: () =>
@@ -104,6 +109,59 @@ it.effect("works in a folder that is not a git repository", () =>
     assert.deepEqual(
       [result.plan.workspace, result.plan.reason],
       ["current", "not a git repository"],
+    );
+  }),
+);
+
+const liveThread = (
+  patch: Partial<LiveThreads.ProjectLiveThread>,
+): LiveThreads.ProjectLiveThread => ({
+  id: "t1",
+  title: "Relatório mensal",
+  recentText: "ajustando o relatório mensal",
+  touchedFiles: ["app/ReportController.php"],
+  status: "idle",
+  usedTokens: null,
+  maxTokens: null,
+  lastActivityAt: 0,
+  branch: "feature/report",
+  worktreePath: null,
+  ...patch,
+});
+
+it.effect("moves to a worktree when a busy thread already edits the same files", () =>
+  Effect.gen(function* () {
+    const result = yield* run(
+      layerFor({
+        paths: ["app/ReportController.php"],
+        live: [
+          liveThread({ id: "busy", status: "running", title: "outro assunto", recentText: "x" }),
+        ],
+      }),
+      "corrija o bug do ReportController",
+    );
+    assert.equal(result.plan.workspace, "worktree");
+    assert.equal(result.plan.reason, "another running thread touches the same files");
+  }),
+);
+
+it.effect("continues in the worktree of the thread the request belongs to", () =>
+  Effect.gen(function* () {
+    const result = yield* run(
+      layerFor({
+        paths: ["app/ReportController.php"],
+        live: [liveThread({ worktreePath: "/w/report" })],
+      }),
+      "ajuste o relatório mensal do ReportController",
+    );
+    assert.deepEqual(result.thread, {
+      action: "send",
+      threadId: "t1",
+      reason: "an idle thread already covers this",
+    });
+    assert.deepEqual(
+      [result.plan.workspace, result.plan.worktreePath],
+      ["existing_worktree", "/w/report"],
     );
   }),
 );

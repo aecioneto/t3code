@@ -1,4 +1,5 @@
 import { impactTerms, summarizeImpact } from "@t3tools/router/impact";
+import { chooseThread, type ThreadChoice } from "@t3tools/router/threads";
 import {
   classifyNature,
   DEFAULT_PROTECTED_BRANCHES,
@@ -9,12 +10,14 @@ import {
 } from "@t3tools/router/workspace";
 import type { ProjectId } from "@t3tools/contracts";
 import * as Context from "effect/Context";
+import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 
 import * as ProjectService from "../project/ProjectService.ts";
+import * as LiveThreads from "./LiveThreads.ts";
 import * as GitVcsDriver from "../vcs/GitVcsDriver.ts";
 import * as WorkspaceEntries from "../workspace/WorkspaceEntries.ts";
 
@@ -39,6 +42,7 @@ export interface WorkspacePlanResult {
   readonly branch: string | null;
   readonly dirty: boolean;
   readonly plan: WorkspacePlan;
+  readonly thread: ThreadChoice;
 }
 
 const SEARCH_LIMIT_PER_TERM = 100;
@@ -58,6 +62,7 @@ const make = Effect.gen(function* () {
   const projects = yield* ProjectService.ProjectService;
   const entries = yield* WorkspaceEntries.WorkspaceEntries;
   const git = yield* GitVcsDriver.GitVcsDriver;
+  const liveThreads = yield* LiveThreads.LiveThreads;
 
   const plan = Effect.fn("WorkspacePlanService.plan")(function* (input: {
     readonly projectId: ProjectId;
@@ -103,6 +108,20 @@ const make = Effect.gen(function* () {
             Effect.orElseSucceed(() => null),
           );
     const impact = summarizeImpact({ prompt: input.prompt, paths });
+    const candidateFiles = Array.from(new Set(paths ?? []));
+    const live = yield* liveThreads.forProject(input.projectId);
+    const now = DateTime.toEpochMillis(yield* DateTime.now);
+    const thread = chooseThread({ prompt: input.prompt, candidateFiles, threads: live, now });
+    // A busy thread already touching these files makes the shared checkout a bad place to work.
+    const busyOverlap = live.some(
+      (entry) =>
+        entry.status !== "idle" && entry.touchedFiles.some((file) => candidateFiles.includes(file)),
+    );
+    // A thread this request belongs to that already works in a worktree keeps that worktree.
+    const continued =
+      thread.action === "send" || thread.action === "queue"
+        ? (live.find((entry) => entry.id === thread.threadId)?.worktreePath ?? null)
+        : null;
 
     const status = yield* git
       .statusDetailsLocal(cwd, { includeDivergence: false })
@@ -119,9 +138,9 @@ const make = Effect.gen(function* () {
       ? planWorkspace({
           nature,
           impact,
-          checkout: { branch, dirty, busyOverlap: false },
+          checkout: { branch, dirty, busyOverlap },
           protectedBranches,
-          existingWorktreePath: null,
+          existingWorktreePath: continued,
         })
       : ({
           workspace: "current",
@@ -129,7 +148,7 @@ const make = Effect.gen(function* () {
           ask: false,
           confidence: 0.9,
         } satisfies WorkspacePlan);
-    return { nature, impact, branch, dirty, plan: planned };
+    return { nature, impact, branch, dirty, plan: planned, thread };
   });
 
   return WorkspacePlanService.of({ plan });

@@ -69,6 +69,11 @@ export const RouterWorkspacePlan = Schema.Struct({
     confidence: Schema.Number,
     worktreePath: Schema.optional(Schema.String),
   }),
+  thread: Schema.Struct({
+    action: Schema.Literals(["send", "queue", "new", "new_with_handoff"]),
+    threadId: Schema.optional(Schema.String),
+    reason: Schema.String,
+  }),
 });
 export type RouterWorkspacePlan = typeof RouterWorkspacePlan.Type;
 

@@ -98,6 +98,7 @@ import * as ProjectFaviconResolver from "./project/ProjectFaviconResolver.ts";
 import * as T3ProjectFileLoader from "./project/T3ProjectFileLoader.ts";
 import * as RepositoryIdentityResolver from "./project/RepositoryIdentityResolver.ts";
 import * as WorkspaceEntries from "./workspace/WorkspaceEntries.ts";
+import * as LiveThreads from "./fork/LiveThreads.ts";
 import * as WorkspacePlanService from "./fork/WorkspacePlanService.ts";
 import * as KnownWorkspaces from "./workspace/KnownWorkspaces.ts";
 import * as WorkspaceFileSystem from "./workspace/WorkspaceFileSystem.ts";
@@ -456,18 +457,10 @@ const layerWorkspaceFileSystem = WorkspaceFileSystem.layer.pipe(
   Layer.provide(layerKnownWorkspaces),
 );
 
-const layerWorkspacePlan = WorkspacePlanService.layer.pipe(
-  Layer.provide(layerWorkspaceEntries),
-  Layer.provide(RuntimeLayer.layerProjectService),
-  Layer.provide(GitVcsDriver.layer),
-  Layer.provide(WorkspacePaths.layer),
-);
-
 const layerWorkspace = Layer.mergeAll(
   WorkspacePaths.layer,
   layerWorkspaceEntries,
   layerWorkspaceFileSystem,
-  layerWorkspacePlan,
 );
 
 const layerProjectFaviconResolver = ProjectFaviconResolver.layer.pipe(
@@ -620,6 +613,7 @@ const layerRuntimeCoreDependenciesBase = Layer.mergeAll(
   ProviderUsageLimitsIngestion.layer,
   layerProviderInstallationRefresh,
   ReplayMarkers.layer,
+  WorkspacePlanService.layer.pipe(Layer.provide(LiveThreads.layer)),
   Layer.effectDiscard(ProjectSettingsOverrideSweep.sweep),
 ).pipe(
   Layer.provideMerge(layerOrchestrationApplication),
