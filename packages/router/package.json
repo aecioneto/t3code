@@ -15,6 +15,10 @@
       "types": "./src/impact.ts",
       "import": "./src/impact.ts"
     },
+    "./threads": {
+      "types": "./src/threads.ts",
+      "import": "./src/threads.ts"
+    },
     "./workspace": {
       "types": "./src/workspace.ts",
       "import": "./src/workspace.ts"
