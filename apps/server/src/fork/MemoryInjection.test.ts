@@ -11,7 +11,7 @@ import * as MemoryStore from "./MemoryStore.ts";
 const layer = MemoryService.layer.pipe(
   Layer.provideMerge(MemoryStore.layer),
   Layer.provideMerge(ForkDatabase.layerMemory),
-  Layer.provide(ServerSettings.layerTest({ memoryEnabledProjectIds: ["p1"] })),
+  Layer.provide(ServerSettings.layerTest({ memoryEnabledProjectIds: ["p1", "p2"] })),
 );
 
 const seed = Effect.gen(function* () {
@@ -82,3 +82,38 @@ it("leaves native slash commands first", () => {
   const result = withMemoryNotes({ driver: "claudeAgent", message, notes: "<project_notes/>" });
   assert.equal(result.message.text, "/compact");
 });
+
+it.effect(
+  "a note saved from a Claude thread reaches a new Codex or OpenCode thread, not another project",
+  () =>
+    Effect.gen(function* () {
+      const service = yield* MemoryService.MemoryService;
+      const memory = yield* Effect.serviceOption(MemoryService.MemoryService);
+      yield* service.write({
+        projectId: "p1",
+        kind: "gotcha",
+        title: "Fila travada",
+        body: "Reiniciar o worker quando a fila travar",
+        origin: "agent",
+        sourceProvider: "claudeAgent",
+      });
+      const notes = yield* memoryNotesFor({
+        memory,
+        projectId: "p1",
+        prompt: "a fila travou de novo",
+        providerTurnOrdinal: 1,
+      });
+      const message = { text: "investigue", attachments: [] };
+      const codex = withMemoryNotes({ driver: "codex", message, notes });
+      const opencode = withMemoryNotes({ driver: "opencode", message, notes });
+      assert.ok(codex.appContext[0]?.text.includes("Fila travada"));
+      assert.ok(opencode.message.text.includes("Fila travada"));
+      const elsewhere = yield* memoryNotesFor({
+        memory,
+        projectId: "p2",
+        prompt: "a fila travou de novo",
+        providerTurnOrdinal: 1,
+      });
+      assert.equal(elsewhere, null);
+    }).pipe(Effect.provide(layer)),
+);
