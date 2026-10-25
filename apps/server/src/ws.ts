@@ -2390,6 +2390,7 @@ export const layerWsRpc = (
         [WS_METHODS.memoryCreate]: memoryRpc.create,
         [WS_METHODS.memoryUpdate]: memoryRpc.update,
         [WS_METHODS.memoryDelete]: memoryRpc.delete,
+        [WS_METHODS.memoryUndoThread]: memoryRpc.undoThread,
         [WS_METHODS.routerRecordWorkspaceChoice]: (input) =>
           router.recordWorkspaceChoice({ ...input, projectId: input.projectId }).pipe(
             Effect.as({}),

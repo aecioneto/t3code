@@ -3,6 +3,7 @@ import type {
   MemoryCreateInput,
   MemoryDeleteInput,
   MemoryListInput,
+  MemoryUndoThreadInput,
   MemoryUpdateInput,
 } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
@@ -22,6 +23,7 @@ const toProjectMemory = (record: MemoryRecord): ProjectMemory => ({
   status: record.status,
   pinned: record.pinned,
   origin: record.origin,
+  sourceThreadId: record.sourceThreadId,
   confidence: record.confidence,
   createdAt: record.createdAt,
   updatedAt: record.updatedAt,
@@ -87,6 +89,12 @@ export const makeMemoryRpcHandlers = (memory: MemoryService.MemoryService["Servi
       })
       .pipe(Effect.mapError(toError("update")));
     return toProjectMemory(updated);
+  }),
+  undoThread: Effect.fn("memoryRpc.undoThread")(function* (input: MemoryUndoThreadInput) {
+    const removed = yield* memory
+      .undoThread({ projectId: input.projectId, threadId: input.threadId })
+      .pipe(Effect.mapError(toError("undoThread")));
+    return { removed };
   }),
   delete: Effect.fn("memoryRpc.delete")(function* (input: MemoryDeleteInput) {
     yield* memory

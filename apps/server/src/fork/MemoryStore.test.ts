@@ -116,3 +116,26 @@ it.effect("a superseding note replaces the old one in search but keeps it on rec
     assert.equal(first?.id, old.id);
   }).pipe(Effect.provide(layer)),
 );
+
+it.effect("undoing a thread removes what it saved except the user's own notes", () =>
+  Effect.gen(function* () {
+    const store = yield* MemoryStore.MemoryStore;
+    const sql = yield* SqlClient.SqlClient;
+    const fromThread = (title: string, origin: "auto" | "agent" | "user", threadId: string) => ({
+      ...input("p1", title, `corpo ${title}`),
+      origin,
+      sourceThreadId: threadId,
+    });
+    yield* store.create(fromThread("auto da t1", "auto", "t1"));
+    yield* store.create(fromThread("agente da t1", "agent", "t1"));
+    yield* store.create(fromThread("minha na t1", "user", "t1"));
+    yield* store.create(fromThread("auto da t2", "auto", "t2"));
+    assert.equal(yield* store.forgetByThread({ projectId: "p1", threadId: "t1" }), 2);
+    const left = yield* store.list({ projectId: "p1", limit: 10 });
+    assert.deepEqual(left.map((memory) => memory.title).toSorted(), ["auto da t2", "minha na t1"]);
+    const indexed = yield* sql<{
+      readonly count: number;
+    }>`SELECT COUNT(*) AS count FROM memories_fts`;
+    assert.equal(indexed[0]?.count, 2);
+  }).pipe(Effect.provide(layer)),
+);

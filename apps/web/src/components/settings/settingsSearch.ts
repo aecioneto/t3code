@@ -361,6 +361,13 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["beta router project suggest switch draft prompt"],
   },
   {
+    id: "memory-extractor",
+    title: "Write notes automatically",
+    to: "/settings/beta",
+    scope: "environment",
+    searchTerms: ["beta memory notes extract automatic model haiku ollama"],
+  },
+  {
     id: "guest-links",
     title: "Guest links",
     to: "/settings/beta",

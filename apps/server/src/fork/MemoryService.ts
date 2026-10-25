@@ -73,6 +73,10 @@ export class MemoryService extends Context.Service<
       readonly id: number;
       readonly panel?: boolean;
     }) => Effect.Effect<void, MemoryServiceError>;
+    readonly undoThread: (input: {
+      readonly projectId: string;
+      readonly threadId: string;
+    }) => Effect.Effect<number, MemoryServiceError>;
     /** Notes worth showing at the start of a thread: pinned, conventions, then the best matches for the prompt. */
     readonly contextBlock: (input: {
       readonly projectId: string;
@@ -159,6 +163,10 @@ const make = Effect.gen(function* () {
           MemoryNotFoundError: () => new MemoryRejectedError({ reason: "not_found" }),
         }),
       );
+    }),
+    // The panel may clean up after memory was turned off, like update and delete.
+    undoThread: Effect.fn("MemoryService.undoThread")(function* (input) {
+      return yield* store.forgetByThread(input);
     }),
     contextBlock: Effect.fn("MemoryService.contextBlock")(function* (input) {
       if (!(yield* isEnabled(input.projectId))) return null;

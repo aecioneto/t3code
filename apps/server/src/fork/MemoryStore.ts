@@ -115,6 +115,11 @@ export class MemoryStore extends Context.Service<
     /** Deletes the memory and its search entry for good; only the audit event remains. */
     readonly forget: (id: number) => Effect.Effect<void, MemoryStoreError | MemoryNotFoundError>;
     readonly forgetProject: (projectId: string) => Effect.Effect<number, MemoryStoreError>;
+    /** Removes what agents and the extractor saved from one thread; the user's own notes stay. */
+    readonly forgetByThread: (input: {
+      readonly projectId: string;
+      readonly threadId: string;
+    }) => Effect.Effect<number, MemoryStoreError>;
     /** When the project's first automatic note was saved; `undefined` before any. */
     readonly firstAutoCreatedAt: (
       projectId: string,
@@ -261,6 +266,21 @@ const make = Effect.gen(function* () {
     return true;
   });
 
+  const forgetByThread = Effect.fn("MemoryStore.forgetByThread")(function* (input: {
+    readonly projectId: string;
+    readonly threadId: string;
+  }) {
+    const rows = yield* sql<{ readonly id: number }>`
+      DELETE FROM memories
+      WHERE project_id = ${input.projectId} AND source_thread_id = ${input.threadId}
+        AND origin != 'user'
+      RETURNING id
+    `;
+    const at = yield* now;
+    for (const row of rows) yield* recordEvent(row.id, input.projectId, "deleted", "user", at);
+    return rows.length;
+  });
+
   const forgetProject = Effect.fn("MemoryStore.forgetProject")(function* (projectId: string) {
     const rows = yield* sql<{ readonly id: number }>`
       DELETE FROM memories WHERE project_id = ${projectId} RETURNING id
@@ -362,6 +382,10 @@ const make = Effect.gen(function* () {
           deleted ? Effect.void : Effect.fail(new MemoryNotFoundError({ id })),
         ),
       ),
+    forgetByThread: (input) =>
+      sql
+        .withTransaction(forgetByThread(input))
+        .pipe(Effect.mapError(storeError("forgetByThread"))),
     forgetProject: (projectId) =>
       forgetProject(projectId).pipe(Effect.mapError(storeError("forgetProject"))),
     firstAutoCreatedAt: (projectId) =>

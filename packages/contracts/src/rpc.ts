@@ -12,6 +12,7 @@ import {
   MemoryError,
   MemoryListInput,
   MemoryListResult,
+  MemoryUndoThreadInput,
   MemoryUpdateInput,
   ProjectMemory,
 } from "./memory.ts";
@@ -436,6 +437,7 @@ export const WS_METHODS = {
   memoryCreate: "memory.create",
   memoryUpdate: "memory.update",
   memoryDelete: "memory.delete",
+  memoryUndoThread: "memory.undoThread",
   mcpAppsUpdateModelContext: "mcpApps.updateModelContext",
 
   providerUploadFeedback: "provider.uploadFeedback",
@@ -1409,6 +1411,12 @@ const WsMemoryDeleteRpc = Rpc.make(WS_METHODS.memoryDelete, {
   error: Schema.Union([MemoryError, EnvironmentAuthorizationError]),
 });
 
+const WsMemoryUndoThreadRpc = Rpc.make(WS_METHODS.memoryUndoThread, {
+  payload: MemoryUndoThreadInput,
+  success: Schema.Struct({ removed: Schema.Int }),
+  error: Schema.Union([MemoryError, EnvironmentAuthorizationError]),
+});
+
 const WsMcpAppsReadResourceRpc = Rpc.make(WS_METHODS.mcpAppsReadResource, {
   payload: McpAppReadResourceInput,
   success: McpAppReadResourceResult,
@@ -2040,6 +2048,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsMemoryCreateRpc,
   WsMemoryUpdateRpc,
   WsMemoryDeleteRpc,
+  WsMemoryUndoThreadRpc,
   WsScheduledTasksListRpc,
   WsScheduledTasksSubscribeRpc,
   WsScheduledTasksUpsertRpc,

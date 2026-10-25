@@ -27,6 +27,7 @@ export const ProjectMemory = Schema.Struct({
   status: MemoryStatus,
   pinned: Schema.Boolean,
   origin: Schema.Literals(["auto", "agent", "user"]),
+  sourceThreadId: Schema.NullOr(Schema.String),
   confidence: Schema.Number,
   createdAt: Schema.String,
   updatedAt: Schema.String,
@@ -77,8 +78,14 @@ export type MemoryUpdateInput = typeof MemoryUpdateInput.Type;
 export const MemoryDeleteInput = Schema.Struct({ projectId: ProjectId, id: Schema.Int });
 export type MemoryDeleteInput = typeof MemoryDeleteInput.Type;
 
+export const MemoryUndoThreadInput = Schema.Struct({
+  projectId: ProjectId,
+  threadId: Schema.String.check(Schema.isMinLength(1)),
+});
+export type MemoryUndoThreadInput = typeof MemoryUndoThreadInput.Type;
+
 export class MemoryError extends Schema.TaggedError<MemoryError>()("MemoryError", {
-  operation: Schema.Literals(["list", "create", "update", "delete"]),
+  operation: Schema.Literals(["list", "create", "update", "delete", "undoThread"]),
   /** Set when the request was refused for a reason the user can act on. */
   reason: Schema.optional(Schema.Literals(["disabled", "secret", "too_long", "not_found"])),
   cause: Schema.optional(Schema.Defect()),

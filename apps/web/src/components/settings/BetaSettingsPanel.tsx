@@ -5,6 +5,7 @@ import { Link } from "@tanstack/react-router";
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
 import { useT3ConnectAuthPrompt } from "../clerk/useT3ConnectAuthPrompt";
 import { Button } from "../ui/button";
+import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
 import { ProjectMemorySettings } from "./ProjectMemorySettings";
 import { ScopedSwitch } from "./ScopedSwitch";
@@ -68,6 +69,33 @@ export function BetaSettingsPanel() {
         {hasCloudPublicConfig() ? <GuestLinksRowWithSignIn /> : <GuestLinksRow />}
       </SettingsSection>
       <SettingsSection id="project-memory" title="Project memory">
+        <SettingsRow
+          serverScoped
+          {...searchableSetting("memory-extractor")}
+          settingKeys={["memoryExtractor"]}
+          title="Write notes automatically"
+          description="After a run that changed files, a model reads a short summary (paths and counts, secrets removed) and proposes notes. They wait for your review at first. Off sends nothing anywhere. Claude Haiku uses the Claude CLI you are signed in to, so the summary goes to Anthropic."
+          control={
+            <Select
+              value={settings.memoryExtractor === "claude-haiku" ? "claude-haiku" : "off"}
+              onValueChange={(value) => {
+                if (value === "off" || value === "claude-haiku") {
+                  updateSettings({ memoryExtractor: value });
+                }
+              }}
+            >
+              <SelectTrigger size="sm" aria-label="Automatic notes">
+                <SelectValue>
+                  {(value: string | null) => (value === "claude-haiku" ? "Claude Haiku" : "Off")}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectPopup align="end" alignItemWithTrigger={false}>
+                <SelectItem value="off">Off</SelectItem>
+                <SelectItem value="claude-haiku">Claude Haiku</SelectItem>
+              </SelectPopup>
+            </Select>
+          }
+        />
         <ProjectMemorySettings />
       </SettingsSection>
     </SettingsPageContainer>

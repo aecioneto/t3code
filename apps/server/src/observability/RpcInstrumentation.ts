@@ -93,6 +93,7 @@ const RPC_AGGREGATES = {
   [WS_METHODS.memoryCreate]: "memory",
   [WS_METHODS.memoryUpdate]: "memory",
   [WS_METHODS.memoryDelete]: "memory",
+  [WS_METHODS.memoryUndoThread]: "memory",
   [WS_METHODS.scheduledTasksList]: "scheduledTasks",
   [WS_METHODS.scheduledTasksSubscribe]: "scheduledTasks",
   [WS_METHODS.scheduledTasksUpsert]: "scheduledTasks",

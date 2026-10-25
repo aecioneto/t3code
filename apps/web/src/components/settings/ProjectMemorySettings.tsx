@@ -4,7 +4,13 @@ import { useState } from "react";
 
 import { useEnvironmentSettings } from "../../hooks/useSettings";
 import { useProjects } from "../../state/entities";
-import { memoryCreate, memoryDelete, memoryListQuery, memoryUpdate } from "../../state/memory";
+import {
+  memoryCreate,
+  memoryDelete,
+  memoryListQuery,
+  memoryUndoThread,
+  memoryUpdate,
+} from "../../state/memory";
 import { useEnvironmentQuery } from "../../state/query";
 import { serverEnvironment } from "../../state/server";
 import { useAtomCommand } from "../../state/use-atom-command";
@@ -101,6 +107,7 @@ function ProjectNotes(props: {
   const create = useAtomCommand(memoryCreate, { reportFailure: false });
   const update = useAtomCommand(memoryUpdate, { reportFailure: false });
   const remove = useAtomCommand(memoryDelete, { reportFailure: false });
+  const undoThread = useAtomCommand(memoryUndoThread, { reportFailure: false });
   const query = useEnvironmentQuery(
     memoryListQuery({ environmentId, input: { projectId, limit: NOTE_PAGE_SIZE } }),
   );
@@ -171,6 +178,23 @@ function ProjectNotes(props: {
             >
               {note.pinned ? "Unpin" : "Pin"}
             </Button>
+            {note.sourceThreadId !== null && note.origin !== "user" ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  void run(
+                    undoThread({
+                      environmentId,
+                      input: { projectId, threadId: note.sourceThreadId ?? "" },
+                    }),
+                    "Could not remove the notes from that thread",
+                  )
+                }
+              >
+                Undo this thread's notes
+              </Button>
+            ) : null}
             <Button
               size="sm"
               variant="outline"

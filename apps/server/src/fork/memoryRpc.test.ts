@@ -63,3 +63,20 @@ it.effect("reports why a request was refused", () =>
     assert.equal(missing.reason, "not_found");
   }).pipe(Effect.provide(layer)),
 );
+
+it.effect("the panel can undo a thread's notes after memory was turned off", () =>
+  Effect.gen(function* () {
+    const store = yield* MemoryStore.MemoryStore;
+    const rpc = makeMemoryRpcHandlers(yield* MemoryService.MemoryService);
+    yield* store.create({
+      projectId: "p1",
+      kind: "gotcha",
+      title: "Da thread",
+      body: "nota automática",
+      origin: "auto",
+      sourceThreadId: "t1",
+    });
+    assert.deepEqual(yield* rpc.undoThread({ projectId: project, threadId: "t1" }), { removed: 1 });
+    assert.equal((yield* rpc.list({ projectId: project })).memories.length, 0);
+  }).pipe(Effect.provide(layer)),
+);

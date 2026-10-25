@@ -27,3 +27,8 @@ export const memoryDelete = createEnvironmentRpcCommand(connectionAtomRuntime, {
   label: "environment-command:memory:delete",
   tag: WS_METHODS.memoryDelete,
 });
+
+export const memoryUndoThread = createEnvironmentRpcCommand(connectionAtomRuntime, {
+  label: "environment-command:memory:undo-thread",
+  tag: WS_METHODS.memoryUndoThread,
+});
