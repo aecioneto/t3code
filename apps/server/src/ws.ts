@@ -116,6 +116,7 @@ import * as Keybindings from "./keybindings.ts";
 import * as ExternalLauncher from "./process/externalLauncher.ts";
 import * as ThreadManagementService from "./orchestration-v2/ThreadManagementService.ts";
 import * as CommandOutputHub from "./orchestration-v2/CommandOutputHub.ts";
+import * as MemorySeed from "./fork/MemorySeed.ts";
 import * as MemoryService from "./fork/MemoryService.ts";
 import { makeMemoryRpcHandlers } from "./fork/memoryRpc.ts";
 import * as RouterService from "./fork/RouterService.ts";
@@ -1261,7 +1262,10 @@ export const layerWsRpc = (
       const mcpAppRequests = yield* McpAppRequests.McpAppRequests;
       const router = yield* RouterService.RouterService;
       const workspacePlan = yield* WorkspacePlanService.WorkspacePlanService;
-      const memoryRpc = makeMemoryRpcHandlers(yield* MemoryService.MemoryService);
+      const memoryRpc = makeMemoryRpcHandlers(
+        yield* MemoryService.MemoryService,
+        yield* MemorySeed.MemorySeed,
+      );
       const analytics = yield* AnalyticsService.AnalyticsService;
       const originProps = clientAnalyticsProps;
       const recordClientCommandAnalytics = (command: OrchestrationV2Command) => {
@@ -2391,6 +2395,7 @@ export const layerWsRpc = (
         [WS_METHODS.memoryUpdate]: memoryRpc.update,
         [WS_METHODS.memoryDelete]: memoryRpc.delete,
         [WS_METHODS.memoryUndoThread]: memoryRpc.undoThread,
+        [WS_METHODS.memorySeed]: memoryRpc.seed,
         [WS_METHODS.routerRecordWorkspaceChoice]: (input) =>
           router.recordWorkspaceChoice({ ...input, projectId: input.projectId }).pipe(
             Effect.as({}),

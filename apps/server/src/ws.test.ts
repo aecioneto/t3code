@@ -43,6 +43,7 @@ import * as EnvironmentTheme from "./environmentTheme.ts";
 import * as GitWorkflowService from "./git/GitWorkflowService.ts";
 import * as HostResources from "./resourceTelemetry/HostResources.ts";
 import * as ManagedProjectFolders from "./project/ManagedProjectFolders.ts";
+import * as MemorySeed from "./fork/MemorySeed.ts";
 import * as MemoryService from "./fork/MemoryService.ts";
 import * as RouterService from "./fork/RouterService.ts";
 import * as WorkspacePlanService from "./fork/WorkspacePlanService.ts";
@@ -412,6 +413,7 @@ const layerUnusedConfigRpcServices = Layer.mergeAll(
   Layer.mock(McpAppRequests.McpAppRequests)({}),
   Layer.mock(RouterService.RouterService)({}),
   Layer.mock(MemoryService.MemoryService)({}),
+  Layer.mock(MemorySeed.MemorySeed)({}),
   Layer.mock(WorkspacePlanService.WorkspacePlanService)({}),
   Layer.mock(ModelManifest.ModelManifest)({}),
   Layer.mock(OrchestrationEventStore.OrchestrationEventStore)({}),

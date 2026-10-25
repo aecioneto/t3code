@@ -32,3 +32,8 @@ export const memoryUndoThread = createEnvironmentRpcCommand(connectionAtomRuntim
   label: "environment-command:memory:undo-thread",
   tag: WS_METHODS.memoryUndoThread,
 });
+
+export const memorySeed = createEnvironmentRpcCommand(connectionAtomRuntime, {
+  label: "environment-command:memory:seed",
+  tag: WS_METHODS.memorySeed,
+});

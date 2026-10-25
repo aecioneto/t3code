@@ -3,6 +3,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./seed": {
+      "types": "./src/seed.ts",
+      "import": "./src/seed.ts"
+    },
     "./dedupe": {
       "types": "./src/dedupe.ts",
       "import": "./src/dedupe.ts"

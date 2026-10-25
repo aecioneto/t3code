@@ -8,6 +8,7 @@ import {
   memoryCreate,
   memoryDelete,
   memoryListQuery,
+  memorySeed,
   memoryUndoThread,
   memoryUpdate,
 } from "../../state/memory";
@@ -108,6 +109,7 @@ function ProjectNotes(props: {
   const update = useAtomCommand(memoryUpdate, { reportFailure: false });
   const remove = useAtomCommand(memoryDelete, { reportFailure: false });
   const undoThread = useAtomCommand(memoryUndoThread, { reportFailure: false });
+  const seed = useAtomCommand(memorySeed, { reportFailure: false });
   const query = useEnvironmentQuery(
     memoryListQuery({ environmentId, input: { projectId, limit: NOTE_PAGE_SIZE } }),
   );
@@ -212,7 +214,29 @@ function ProjectNotes(props: {
       ))}
       {draft === null ? (
         props.canAdd ? (
-          <div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                void seed({ environmentId, input: { projectId } }).then((result) => {
+                  if (result._tag !== "Success") {
+                    toastManager.add({ type: "error", title: "Could not import notes" });
+                    return;
+                  }
+                  toastManager.add({
+                    type: "success",
+                    title:
+                      result.value.files.length === 0
+                        ? "No CLAUDE.md or AGENTS.md found"
+                        : `${result.value.proposed} notes proposed for review`,
+                  });
+                  query.refresh();
+                })
+              }
+            >
+              Import from CLAUDE.md / AGENTS.md
+            </Button>
             <Button
               size="sm"
               variant="outline"

@@ -84,8 +84,18 @@ export const MemoryUndoThreadInput = Schema.Struct({
 });
 export type MemoryUndoThreadInput = typeof MemoryUndoThreadInput.Type;
 
+export const MemorySeedInput = Schema.Struct({ projectId: ProjectId });
+export type MemorySeedInput = typeof MemorySeedInput.Type;
+
+export const MemorySeedResult = Schema.Struct({
+  proposed: Schema.Int,
+  alreadyKnown: Schema.Int,
+  files: Schema.Array(Schema.String),
+});
+export type MemorySeedResult = typeof MemorySeedResult.Type;
+
 export class MemoryError extends Schema.TaggedError<MemoryError>()("MemoryError", {
-  operation: Schema.Literals(["list", "create", "update", "delete", "undoThread"]),
+  operation: Schema.Literals(["list", "create", "update", "delete", "undoThread", "seed"]),
   /** Set when the request was refused for a reason the user can act on. */
   reason: Schema.optional(Schema.Literals(["disabled", "secret", "too_long", "not_found"])),
   cause: Schema.optional(Schema.Defect()),

@@ -3,11 +3,13 @@ import type {
   MemoryCreateInput,
   MemoryDeleteInput,
   MemoryListInput,
+  MemorySeedInput,
   MemoryUndoThreadInput,
   MemoryUpdateInput,
 } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 
+import type * as MemorySeed from "./MemorySeed.ts";
 import type * as MemoryService from "./MemoryService.ts";
 import type { MemoryRecord } from "./MemoryStore.ts";
 
@@ -38,7 +40,10 @@ const toError =
       : new MemoryError({ operation, cause });
 
 /** The user's own panel: it may list, edit and delete after memory was turned off for the project. */
-export const makeMemoryRpcHandlers = (memory: MemoryService.MemoryService["Service"]) => ({
+export const makeMemoryRpcHandlers = (
+  memory: MemoryService.MemoryService["Service"],
+  seed: MemorySeed.MemorySeed["Service"],
+) => ({
   list: Effect.fn("memoryRpc.list")(function* (input: MemoryListInput) {
     const limit = input.limit ?? DEFAULT_LIST_LIMIT;
     const page = yield* memory
@@ -95,6 +100,17 @@ export const makeMemoryRpcHandlers = (memory: MemoryService.MemoryService["Servi
       .undoThread({ projectId: input.projectId, threadId: input.threadId })
       .pipe(Effect.mapError(toError("undoThread")));
     return { removed };
+  }),
+  seed: Effect.fn("memoryRpc.seed")(function* (input: MemorySeedInput) {
+    return yield* seed
+      .seedProject({ projectId: input.projectId })
+      .pipe(
+        Effect.mapError((cause) =>
+          cause.reason === "disabled"
+            ? new MemoryError({ operation: "seed", reason: "disabled" })
+            : new MemoryError({ operation: "seed", cause }),
+        ),
+      );
   }),
   delete: Effect.fn("memoryRpc.delete")(function* (input: MemoryDeleteInput) {
     yield* memory
