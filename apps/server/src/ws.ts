@@ -116,6 +116,8 @@ import * as Keybindings from "./keybindings.ts";
 import * as ExternalLauncher from "./process/externalLauncher.ts";
 import * as ThreadManagementService from "./orchestration-v2/ThreadManagementService.ts";
 import * as CommandOutputHub from "./orchestration-v2/CommandOutputHub.ts";
+import * as MemoryService from "./fork/MemoryService.ts";
+import { makeMemoryRpcHandlers } from "./fork/memoryRpc.ts";
 import * as RouterService from "./fork/RouterService.ts";
 import * as McpAppRequests from "./mcpApps/McpAppRequests.ts";
 import * as ProviderSessionManager from "./orchestration-v2/ProviderSessionManager.ts";
@@ -1257,6 +1259,7 @@ export const layerWsRpc = (
       const providerSessionsV2 = yield* ProviderSessionManager.ProviderSessionManagerV2;
       const mcpAppRequests = yield* McpAppRequests.McpAppRequests;
       const router = yield* RouterService.RouterService;
+      const memoryRpc = makeMemoryRpcHandlers(yield* MemoryService.MemoryService);
       const analytics = yield* AnalyticsService.AnalyticsService;
       const originProps = clientAnalyticsProps;
       const recordClientCommandAnalytics = (command: OrchestrationV2Command) => {
@@ -2381,6 +2384,10 @@ export const layerWsRpc = (
             }
             return { providers };
           }),
+        [WS_METHODS.memoryList]: memoryRpc.list,
+        [WS_METHODS.memoryCreate]: memoryRpc.create,
+        [WS_METHODS.memoryUpdate]: memoryRpc.update,
+        [WS_METHODS.memoryDelete]: memoryRpc.delete,
         [WS_METHODS.routerClassify]: (input) =>
           router
             .classify(input)

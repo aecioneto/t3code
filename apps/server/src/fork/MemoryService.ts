@@ -66,10 +66,13 @@ export class MemoryService extends Context.Service<
       readonly projectId: string;
       readonly id: number;
       readonly patch: MemoryStore.MemoryPatch;
+      /** The user's own panel may manage notes after memory was turned off. */
+      readonly panel?: boolean;
     }) => Effect.Effect<MemoryStore.MemoryRecord, MemoryServiceError>;
     readonly forget: (input: {
       readonly projectId: string;
       readonly id: number;
+      readonly panel?: boolean;
     }) => Effect.Effect<void, MemoryServiceError>;
     /** Notes worth showing at the start of a thread: pinned, conventions, then the best matches for the prompt. */
     readonly contextBlock: (input: {
@@ -82,6 +85,7 @@ export class MemoryService extends Context.Service<
       readonly status?: MemoryStatus;
       readonly limit: number;
       readonly afterId?: number;
+      readonly panel?: boolean;
     }) => Effect.Effect<ReadonlyArray<MemoryStore.MemoryRecord>, MemoryServiceError>;
   }
 >()("t3/fork/MemoryService") {}
@@ -139,7 +143,7 @@ const make = Effect.gen(function* () {
       return yield* store.create(input);
     }),
     update: Effect.fn("MemoryService.update")(function* (input) {
-      yield* requireEnabled(input.projectId);
+      if (input.panel !== true) yield* requireEnabled(input.projectId);
       yield* screen(input.patch);
       yield* requireOwned(input.projectId, input.id);
       return yield* store.update(input.id, input.patch).pipe(
@@ -149,7 +153,7 @@ const make = Effect.gen(function* () {
       );
     }),
     forget: Effect.fn("MemoryService.forget")(function* (input) {
-      yield* requireEnabled(input.projectId);
+      if (input.panel !== true) yield* requireEnabled(input.projectId);
       yield* requireOwned(input.projectId, input.id);
       yield* store.forget(input.id).pipe(
         Effect.catchTags({
@@ -179,7 +183,7 @@ const make = Effect.gen(function* () {
       return buildMemoryBlock(ordered);
     }),
     list: Effect.fn("MemoryService.list")(function* (input) {
-      yield* requireEnabled(input.projectId);
+      if (input.panel !== true) yield* requireEnabled(input.projectId);
       return yield* store.list(input);
     }),
   });

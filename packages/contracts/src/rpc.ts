@@ -7,6 +7,15 @@ import {
 } from "./orchestrationV2.ts";
 import { OrchestrationDispatchCommandError } from "./orchestrationDispatch.ts";
 import {
+  MemoryCreateInput,
+  MemoryDeleteInput,
+  MemoryError,
+  MemoryListInput,
+  MemoryListResult,
+  MemoryUpdateInput,
+  ProjectMemory,
+} from "./memory.ts";
+import {
   RouterClassifyInput,
   RouterClassifyResult,
   RouterError,
@@ -418,6 +427,10 @@ export const WS_METHODS = {
   mcpAppsReadResource: "mcpApps.readResource",
   routerClassify: "router.classify",
   routerRecordChoice: "router.recordChoice",
+  memoryList: "memory.list",
+  memoryCreate: "memory.create",
+  memoryUpdate: "memory.update",
+  memoryDelete: "memory.delete",
   mcpAppsUpdateModelContext: "mcpApps.updateModelContext",
 
   providerUploadFeedback: "provider.uploadFeedback",
@@ -1355,6 +1368,30 @@ const WsRouterRecordChoiceRpc = Rpc.make(WS_METHODS.routerRecordChoice, {
   error: Schema.Union([RouterError, EnvironmentAuthorizationError]),
 });
 
+const WsMemoryListRpc = Rpc.make(WS_METHODS.memoryList, {
+  payload: MemoryListInput,
+  success: MemoryListResult,
+  error: Schema.Union([MemoryError, EnvironmentAuthorizationError]),
+});
+
+const WsMemoryCreateRpc = Rpc.make(WS_METHODS.memoryCreate, {
+  payload: MemoryCreateInput,
+  success: ProjectMemory,
+  error: Schema.Union([MemoryError, EnvironmentAuthorizationError]),
+});
+
+const WsMemoryUpdateRpc = Rpc.make(WS_METHODS.memoryUpdate, {
+  payload: MemoryUpdateInput,
+  success: ProjectMemory,
+  error: Schema.Union([MemoryError, EnvironmentAuthorizationError]),
+});
+
+const WsMemoryDeleteRpc = Rpc.make(WS_METHODS.memoryDelete, {
+  payload: MemoryDeleteInput,
+  success: Schema.Struct({}),
+  error: Schema.Union([MemoryError, EnvironmentAuthorizationError]),
+});
+
 const WsMcpAppsReadResourceRpc = Rpc.make(WS_METHODS.mcpAppsReadResource, {
   payload: McpAppReadResourceInput,
   success: McpAppReadResourceResult,
@@ -1980,6 +2017,10 @@ export const WsRpcGroup = RpcGroup.make(
   WsServerSignalProcessRpc,
   WsRouterClassifyRpc,
   WsRouterRecordChoiceRpc,
+  WsMemoryListRpc,
+  WsMemoryCreateRpc,
+  WsMemoryUpdateRpc,
+  WsMemoryDeleteRpc,
   WsScheduledTasksListRpc,
   WsScheduledTasksSubscribeRpc,
   WsScheduledTasksUpsertRpc,

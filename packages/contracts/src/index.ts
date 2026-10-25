@@ -54,6 +54,7 @@ export * from "./assets.ts";
 export * from "./review.ts";
 export * from "./mcpApps.ts";
 export * from "./router.ts";
+export * from "./memory.ts";
 export * from "./browserImport.ts";
 export * from "./browserProfile.ts";
 export * from "./device.ts";
