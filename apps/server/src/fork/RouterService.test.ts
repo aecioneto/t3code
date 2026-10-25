@@ -106,3 +106,29 @@ it.effect("keeps a corrected choice for later tuning", () =>
     assert.equal(entry?.suggestedProjectId, "copiador-id");
   }).pipe(Effect.provide(layerFor([]))),
 );
+
+it.effect("lets the user add aliases and keywords without losing what was derived", () => {
+  const rota = makeWorkspace("rota-profile", {
+    "README.md": "Gestão de licitações.",
+    "composer.json": "{}",
+  });
+  return Effect.gen(function* () {
+    const router = yield* RouterService.RouterService;
+    const before = yield* router.getProfile({ projectId: "rota-id" });
+    assert.deepEqual(before?.stack, ["PHP"]);
+    assert.deepEqual(before?.aliases, []);
+    const updated = yield* router.updateProfile({
+      projectId: "rota-id",
+      aliases: ["pregão"],
+      keywords: ["empenho", "ata"],
+    });
+    assert.deepEqual([updated?.aliases, updated?.keywords], [["pregão"], ["empenho", "ata"]]);
+    assert.deepEqual(updated?.stack, ["PHP"]);
+    // The next sync keeps the user's edits instead of deriving the profile again.
+    const again = yield* router.getProfile({ projectId: "rota-id" });
+    assert.deepEqual(again?.keywords, ["empenho", "ata"]);
+    const found = yield* router.classify({ prompt: "o pregão do empenho" });
+    assert.equal(found.candidates[0]?.projectId, "rota-id");
+    assert.equal(yield* router.getProfile({ projectId: "ghost" }), undefined);
+  }).pipe(Effect.provide(layerFor([shell("rota-id", "Rota", rota)])));
+});

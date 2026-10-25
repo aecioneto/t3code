@@ -24,7 +24,10 @@ import {
   RouterClassifyInput,
   RouterClassifyResult,
   RouterError,
+  RouterGetProfileInput,
   RouterPlanWorkspaceInput,
+  RouterProfile,
+  RouterUpdateProfileInput,
   RouterRecordChoiceInput,
   RouterRecordWorkspaceChoiceInput,
   RouterWorkspacePlan,
@@ -436,6 +439,8 @@ export const WS_METHODS = {
   routerClassify: "router.classify",
   routerRecordChoice: "router.recordChoice",
   routerPlanWorkspace: "router.planWorkspace",
+  routerGetProfile: "router.getProfile",
+  routerUpdateProfile: "router.updateProfile",
   routerRecordWorkspaceChoice: "router.recordWorkspaceChoice",
   memoryList: "memory.list",
   memoryCreate: "memory.create",
@@ -1387,6 +1392,18 @@ const WsRouterRecordWorkspaceChoiceRpc = Rpc.make(WS_METHODS.routerRecordWorkspa
   error: Schema.Union([RouterError, EnvironmentAuthorizationError]),
 });
 
+const WsRouterGetProfileRpc = Rpc.make(WS_METHODS.routerGetProfile, {
+  payload: RouterGetProfileInput,
+  success: Schema.NullOr(RouterProfile),
+  error: Schema.Union([RouterError, EnvironmentAuthorizationError]),
+});
+
+const WsRouterUpdateProfileRpc = Rpc.make(WS_METHODS.routerUpdateProfile, {
+  payload: RouterUpdateProfileInput,
+  success: Schema.NullOr(RouterProfile),
+  error: Schema.Union([RouterError, EnvironmentAuthorizationError]),
+});
+
 const WsRouterRecordChoiceRpc = Rpc.make(WS_METHODS.routerRecordChoice, {
   payload: RouterRecordChoiceInput,
   success: Schema.Struct({}),
@@ -2061,6 +2078,8 @@ export const WsRpcGroup = RpcGroup.make(
   WsRouterClassifyRpc,
   WsRouterRecordChoiceRpc,
   WsRouterPlanWorkspaceRpc,
+  WsRouterGetProfileRpc,
+  WsRouterUpdateProfileRpc,
   WsRouterRecordWorkspaceChoiceRpc,
   WsMemoryListRpc,
   WsMemoryCreateRpc,

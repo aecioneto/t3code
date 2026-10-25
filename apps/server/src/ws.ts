@@ -121,6 +121,7 @@ import * as MemorySeed from "./fork/MemorySeed.ts";
 import * as MemoryService from "./fork/MemoryService.ts";
 import { makeMemoryRpcHandlers } from "./fork/memoryRpc.ts";
 import * as RouterService from "./fork/RouterService.ts";
+import { toRouterProfile } from "./fork/routerProfileWire.ts";
 import * as WorkspacePlanService from "./fork/WorkspacePlanService.ts";
 import * as McpAppRequests from "./mcpApps/McpAppRequests.ts";
 import * as ProviderSessionManager from "./orchestration-v2/ProviderSessionManager.ts";
@@ -2405,6 +2406,16 @@ export const layerWsRpc = (
             Effect.mapError(
               (cause) => new RouterError({ operation: "recordWorkspaceChoice", cause }),
             ),
+          ),
+        [WS_METHODS.routerGetProfile]: (input) =>
+          router.getProfile(input).pipe(
+            Effect.map((profile) => toRouterProfile(input.projectId, profile)),
+            Effect.mapError((cause) => new RouterError({ operation: "getProfile", cause })),
+          ),
+        [WS_METHODS.routerUpdateProfile]: (input) =>
+          router.updateProfile(input).pipe(
+            Effect.map((profile) => toRouterProfile(input.projectId, profile)),
+            Effect.mapError((cause) => new RouterError({ operation: "updateProfile", cause })),
           ),
         [WS_METHODS.routerPlanWorkspace]: (input) =>
           workspacePlan

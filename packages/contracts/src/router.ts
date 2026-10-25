@@ -38,6 +38,8 @@ export class RouterError extends Schema.TaggedError<RouterError>()("RouterError"
     "recordChoice",
     "planWorkspace",
     "recordWorkspaceChoice",
+    "getProfile",
+    "updateProfile",
   ]),
   cause: Schema.optional(Schema.Defect()),
 }) {
@@ -87,3 +89,28 @@ export const RouterRecordWorkspaceChoiceInput = Schema.Struct({
   chosen: Schema.Literals(["current", "worktree"]),
 });
 export type RouterRecordWorkspaceChoiceInput = typeof RouterRecordWorkspaceChoiceInput.Type;
+
+export const RouterProfile = Schema.Struct({
+  projectId: ProjectId,
+  slug: Schema.String,
+  name: Schema.String,
+  aliases: Schema.Array(Schema.String),
+  description: Schema.String,
+  stack: Schema.Array(Schema.String),
+  keywords: Schema.Array(Schema.String),
+});
+export type RouterProfile = typeof RouterProfile.Type;
+
+export const RouterGetProfileInput = Schema.Struct({ projectId: ProjectId });
+export type RouterGetProfileInput = typeof RouterGetProfileInput.Type;
+
+const Terms = Schema.Array(
+  Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(60)),
+).check(Schema.isMaxLength(40));
+
+export const RouterUpdateProfileInput = Schema.Struct({
+  projectId: ProjectId,
+  aliases: Terms,
+  keywords: Terms,
+});
+export type RouterUpdateProfileInput = typeof RouterUpdateProfileInput.Type;

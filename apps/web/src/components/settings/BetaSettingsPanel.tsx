@@ -8,6 +8,7 @@ import { Button } from "../ui/button";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
 import { ProjectMemorySettings } from "./ProjectMemorySettings";
+import { ProjectRouterSettings } from "./ProjectRouterSettings";
 import { ScopedSwitch } from "./ScopedSwitch";
 import {
   SettingResetButton,
@@ -67,6 +68,9 @@ export function BetaSettingsPanel() {
         />
         {/* Clerk is only mounted when this build has T3 Connect. */}
         {hasCloudPublicConfig() ? <GuestLinksRowWithSignIn /> : <GuestLinksRow />}
+      </SettingsSection>
+      <SettingsSection id="project-suggestions" title="Project names">
+        <ProjectRouterSettings />
       </SettingsSection>
       <SettingsSection id="project-memory" title="Project memory">
         <SettingsRow

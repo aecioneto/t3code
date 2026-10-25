@@ -115,6 +115,8 @@ export const RPC_REQUIRED_SCOPES = {
   [WS_METHODS.routerClassify]: AuthOrchestrationReadScope,
   [WS_METHODS.routerRecordChoice]: AuthOrchestrationOperateScope,
   [WS_METHODS.routerPlanWorkspace]: AuthOrchestrationReadScope,
+  [WS_METHODS.routerGetProfile]: AuthOrchestrationReadScope,
+  [WS_METHODS.routerUpdateProfile]: AuthOrchestrationOperateScope,
   [WS_METHODS.routerRecordWorkspaceChoice]: AuthOrchestrationOperateScope,
   [WS_METHODS.memoryList]: AuthOrchestrationReadScope,
   [WS_METHODS.memoryCreate]: AuthOrchestrationOperateScope,

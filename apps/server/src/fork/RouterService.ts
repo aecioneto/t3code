@@ -1,4 +1,5 @@
 import { deriveProfile } from "@t3tools/router/derive";
+import type { ProjectProfile } from "@t3tools/router/profile";
 import { DEFAULT_THRESHOLDS, route, type RouterThresholds } from "@t3tools/router/route";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
@@ -36,6 +37,16 @@ export class RouterService extends Context.Service<
       readonly suggestedProjectId: string | null;
       readonly chosenProjectId: string;
     }) => Effect.Effect<void, RouterStore.RouterStoreError>;
+    /** The project's profile, derived on first use; `undefined` for a project the server does not know. */
+    readonly getProfile: (input: {
+      readonly projectId: string;
+    }) => Effect.Effect<ProjectProfile | undefined, RouterStore.RouterStoreError>;
+    /** The names and words the user adds so the router recognizes the project; derived fields stay. */
+    readonly updateProfile: (input: {
+      readonly projectId: string;
+      readonly aliases: ReadonlyArray<string>;
+      readonly keywords: ReadonlyArray<string>;
+    }) => Effect.Effect<ProjectProfile | undefined, RouterStore.RouterStoreError>;
     /** Records whether the user followed the workspace recommendation, to measure agreement. */
     readonly recordWorkspaceChoice: (
       input: Omit<RouterStore.WorkspaceFeedback, "createdAt">,
@@ -111,7 +122,32 @@ const make = Effect.fn("RouterService.make")(function* (thresholds: RouterThresh
     yield* store.recordWorkspaceFeedback({ ...input, createdAt });
   });
 
-  return RouterService.of({ classify, recordChoice, recordWorkspaceChoice });
+  const getProfile = Effect.fn("RouterService.getProfile")(function* (input: {
+    readonly projectId: string;
+  }) {
+    const profiles = yield* syncProfiles();
+    return profiles.find((profile) => profile.id === input.projectId);
+  });
+
+  const updateProfile = Effect.fn("RouterService.updateProfile")(function* (input: {
+    readonly projectId: string;
+    readonly aliases: ReadonlyArray<string>;
+    readonly keywords: ReadonlyArray<string>;
+  }) {
+    const current = yield* getProfile({ projectId: input.projectId });
+    if (current === undefined) return undefined;
+    const next = { ...current, aliases: input.aliases, keywords: input.keywords };
+    yield* store.upsertProfile(next);
+    return next;
+  });
+
+  return RouterService.of({
+    classify,
+    recordChoice,
+    recordWorkspaceChoice,
+    getProfile,
+    updateProfile,
+  });
 });
 
 export const layer = (thresholds: RouterThresholds = DEFAULT_THRESHOLDS) =>
