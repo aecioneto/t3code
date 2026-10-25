@@ -12,6 +12,8 @@ import {
   MemoryError,
   MemoryListInput,
   MemoryListResult,
+  MemoryMirrorInput,
+  MemoryMirrorResult,
   MemorySeedInput,
   MemorySeedResult,
   MemoryUndoThreadInput,
@@ -441,6 +443,7 @@ export const WS_METHODS = {
   memoryDelete: "memory.delete",
   memoryUndoThread: "memory.undoThread",
   memorySeed: "memory.seed",
+  memoryMirror: "memory.mirror",
   mcpAppsUpdateModelContext: "mcpApps.updateModelContext",
 
   providerUploadFeedback: "provider.uploadFeedback",
@@ -1426,6 +1429,12 @@ const WsMemorySeedRpc = Rpc.make(WS_METHODS.memorySeed, {
   error: Schema.Union([MemoryError, EnvironmentAuthorizationError]),
 });
 
+const WsMemoryMirrorRpc = Rpc.make(WS_METHODS.memoryMirror, {
+  payload: MemoryMirrorInput,
+  success: MemoryMirrorResult,
+  error: Schema.Union([MemoryError, EnvironmentAuthorizationError]),
+});
+
 const WsMcpAppsReadResourceRpc = Rpc.make(WS_METHODS.mcpAppsReadResource, {
   payload: McpAppReadResourceInput,
   success: McpAppReadResourceResult,
@@ -2059,6 +2068,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsMemoryDeleteRpc,
   WsMemoryUndoThreadRpc,
   WsMemorySeedRpc,
+  WsMemoryMirrorRpc,
   WsScheduledTasksListRpc,
   WsScheduledTasksSubscribeRpc,
   WsScheduledTasksUpsertRpc,

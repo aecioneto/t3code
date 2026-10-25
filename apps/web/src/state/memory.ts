@@ -37,3 +37,8 @@ export const memorySeed = createEnvironmentRpcCommand(connectionAtomRuntime, {
   label: "environment-command:memory:seed",
   tag: WS_METHODS.memorySeed,
 });
+
+export const memoryMirror = createEnvironmentRpcCommand(connectionAtomRuntime, {
+  label: "environment-command:memory:mirror",
+  tag: WS_METHODS.memoryMirror,
+});

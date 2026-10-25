@@ -101,6 +101,7 @@ import * as WorkspaceEntries from "./workspace/WorkspaceEntries.ts";
 import * as LiveThreads from "./fork/LiveThreads.ts";
 import * as MemoryExtractionReactor from "./fork/MemoryExtractionReactor.ts";
 import * as MemoryExtractor from "./fork/MemoryExtractor.ts";
+import * as MemoryMirror from "./fork/MemoryMirror.ts";
 import * as MemorySeed from "./fork/MemorySeed.ts";
 import * as MemoryService from "./fork/MemoryService.ts";
 import * as MemoryStore from "./fork/MemoryStore.ts";
@@ -634,6 +635,10 @@ const layerRuntimeCoreDependenciesBase = Layer.mergeAll(
   ReplayMarkers.layer,
   WorkspacePlanService.layer.pipe(Layer.provide(LiveThreads.layer)),
   MemorySeed.layer.pipe(
+    Layer.provide(MemoryService.layerProduction),
+    Layer.provide(MemoryStore.layerProduction),
+  ),
+  MemoryMirror.layer.pipe(
     Layer.provide(MemoryService.layerProduction),
     Layer.provide(MemoryStore.layerProduction),
   ),

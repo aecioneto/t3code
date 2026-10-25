@@ -116,6 +116,7 @@ import * as Keybindings from "./keybindings.ts";
 import * as ExternalLauncher from "./process/externalLauncher.ts";
 import * as ThreadManagementService from "./orchestration-v2/ThreadManagementService.ts";
 import * as CommandOutputHub from "./orchestration-v2/CommandOutputHub.ts";
+import * as MemoryMirror from "./fork/MemoryMirror.ts";
 import * as MemorySeed from "./fork/MemorySeed.ts";
 import * as MemoryService from "./fork/MemoryService.ts";
 import { makeMemoryRpcHandlers } from "./fork/memoryRpc.ts";
@@ -1265,6 +1266,7 @@ export const layerWsRpc = (
       const memoryRpc = makeMemoryRpcHandlers(
         yield* MemoryService.MemoryService,
         yield* MemorySeed.MemorySeed,
+        yield* MemoryMirror.MemoryMirror,
       );
       const analytics = yield* AnalyticsService.AnalyticsService;
       const originProps = clientAnalyticsProps;
@@ -2396,6 +2398,7 @@ export const layerWsRpc = (
         [WS_METHODS.memoryDelete]: memoryRpc.delete,
         [WS_METHODS.memoryUndoThread]: memoryRpc.undoThread,
         [WS_METHODS.memorySeed]: memoryRpc.seed,
+        [WS_METHODS.memoryMirror]: memoryRpc.mirror,
         [WS_METHODS.routerRecordWorkspaceChoice]: (input) =>
           router.recordWorkspaceChoice({ ...input, projectId: input.projectId }).pipe(
             Effect.as({}),

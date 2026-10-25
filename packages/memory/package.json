@@ -3,6 +3,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./mirror": {
+      "types": "./src/mirror.ts",
+      "import": "./src/mirror.ts"
+    },
     "./seed": {
       "types": "./src/seed.ts",
       "import": "./src/seed.ts"

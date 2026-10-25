@@ -8,6 +8,7 @@ import {
   memoryCreate,
   memoryDelete,
   memoryListQuery,
+  memoryMirror,
   memorySeed,
   memoryUndoThread,
   memoryUpdate,
@@ -110,6 +111,7 @@ function ProjectNotes(props: {
   const remove = useAtomCommand(memoryDelete, { reportFailure: false });
   const undoThread = useAtomCommand(memoryUndoThread, { reportFailure: false });
   const seed = useAtomCommand(memorySeed, { reportFailure: false });
+  const mirror = useAtomCommand(memoryMirror, { reportFailure: false });
   const query = useEnvironmentQuery(
     memoryListQuery({ environmentId, input: { projectId, limit: NOTE_PAGE_SIZE } }),
   );
@@ -236,6 +238,25 @@ function ProjectNotes(props: {
               }
             >
               Import from CLAUDE.md / AGENTS.md
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                void mirror({ environmentId, input: { projectId } }).then((result) => {
+                  toastManager.add(
+                    result._tag === "Success"
+                      ? {
+                          type: "success",
+                          title: `${result.value.notes} notes written to ${result.value.path}`,
+                          description: "Review the change in git before committing it.",
+                        }
+                      : { type: "error", title: "Could not write AGENTS.md" },
+                  );
+                })
+              }
+            >
+              Write to AGENTS.md
             </Button>
             <Button
               size="sm"

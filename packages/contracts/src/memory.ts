@@ -94,8 +94,22 @@ export const MemorySeedResult = Schema.Struct({
 });
 export type MemorySeedResult = typeof MemorySeedResult.Type;
 
+export const MemoryMirrorInput = Schema.Struct({ projectId: ProjectId });
+export type MemoryMirrorInput = typeof MemoryMirrorInput.Type;
+
+export const MemoryMirrorResult = Schema.Struct({ path: Schema.String, notes: Schema.Int });
+export type MemoryMirrorResult = typeof MemoryMirrorResult.Type;
+
 export class MemoryError extends Schema.TaggedError<MemoryError>()("MemoryError", {
-  operation: Schema.Literals(["list", "create", "update", "delete", "undoThread", "seed"]),
+  operation: Schema.Literals([
+    "list",
+    "create",
+    "update",
+    "delete",
+    "undoThread",
+    "seed",
+    "mirror",
+  ]),
   /** Set when the request was refused for a reason the user can act on. */
   reason: Schema.optional(Schema.Literals(["disabled", "secret", "too_long", "not_found"])),
   cause: Schema.optional(Schema.Defect()),

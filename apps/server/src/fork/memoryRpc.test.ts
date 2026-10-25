@@ -29,7 +29,7 @@ it("keeps the contract's kinds and statuses in step with the memory package", ()
 it.effect("lets the panel list, edit and delete after memory was turned off", () =>
   Effect.gen(function* () {
     const store = yield* MemoryStore.MemoryStore;
-    const rpc = makeMemoryRpcHandlers(yield* MemoryService.MemoryService, noSeed);
+    const rpc = makeMemoryRpcHandlers(yield* MemoryService.MemoryService, noSeed, noSeed);
     const { memory } = yield* store.create({
       projectId: "p1",
       kind: "gotcha",
@@ -55,7 +55,7 @@ it.effect("lets the panel list, edit and delete after memory was turned off", ()
 
 it.effect("reports why a request was refused", () =>
   Effect.gen(function* () {
-    const rpc = makeMemoryRpcHandlers(yield* MemoryService.MemoryService, noSeed);
+    const rpc = makeMemoryRpcHandlers(yield* MemoryService.MemoryService, noSeed, noSeed);
     const refused = yield* Effect.flip(
       rpc.create({ projectId: project, kind: "gotcha", title: "x", body: "y" }),
     );
@@ -68,7 +68,7 @@ it.effect("reports why a request was refused", () =>
 it.effect("the panel can undo a thread's notes after memory was turned off", () =>
   Effect.gen(function* () {
     const store = yield* MemoryStore.MemoryStore;
-    const rpc = makeMemoryRpcHandlers(yield* MemoryService.MemoryService, noSeed);
+    const rpc = makeMemoryRpcHandlers(yield* MemoryService.MemoryService, noSeed, noSeed);
     yield* store.create({
       projectId: "p1",
       kind: "gotcha",
