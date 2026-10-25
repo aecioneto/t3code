@@ -14,13 +14,13 @@ Fork do T3 Code que adiciona dois recursos: um compositor global, que escolhe o 
 
 **Objetivos**
 
-| ID | Objetivo | Medida de sucesso |
-| --- | --- | --- |
-| G1 | Digitar "adicione login no copiador" (ou sem citar o projeto) e o pedido ir para a thread viva do projeto certo, já em branch atual ou worktree conforme o impacto | Acerto top-1 de roteamento ≥ 90% num conjunto de teste do próprio usuário |
-| G2 | Roteamento barato e rápido, com fallback sem LLM | p50 < 300 ms no caminho léxico; p95 < 3 s com LLM |
-| G3 | Memória por projeto compartilhada entre todos os provedores | Fato gravado numa thread do Claude aparece no contexto de uma thread nova do Codex |
-| G4 | Escrita automática, sem o usuário pedir | ≥ 70% das threads com mudanças geram ao menos uma memória útil (revisão manual) |
-| G5 | Execução local e controle total do usuário | Dados em disco local, sem telemetria, tudo visível, editável e apagável na UI |
+| ID  | Objetivo                                                                                                                                                           | Medida de sucesso                                                                  |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| G1  | Digitar "adicione login no copiador" (ou sem citar o projeto) e o pedido ir para a thread viva do projeto certo, já em branch atual ou worktree conforme o impacto | Acerto top-1 de roteamento ≥ 90% num conjunto de teste do próprio usuário          |
+| G2  | Roteamento barato e rápido, com fallback sem LLM                                                                                                                   | p50 < 300 ms no caminho léxico; p95 < 3 s com LLM                                  |
+| G3  | Memória por projeto compartilhada entre todos os provedores                                                                                                        | Fato gravado numa thread do Claude aparece no contexto de uma thread nova do Codex |
+| G4  | Escrita automática, sem o usuário pedir                                                                                                                            | ≥ 70% das threads com mudanças geram ao menos uma memória útil (revisão manual)    |
+| G5  | Execução local e controle total do usuário                                                                                                                         | Dados em disco local, sem telemetria, tudo visível, editável e apagável na UI      |
 
 **Não-objetivos**
 
@@ -33,14 +33,14 @@ Fork do T3 Code que adiciona dois recursos: um compositor global, que escolhe o 
 
 O T3 Code não tem modelo próprio. É um servidor local com interface web e desktop que dirige os CLIs de agente já instalados e autenticados. Os pontos abaixo vêm de páginas públicas e de snippets de discussões do repositório; **devem ser confirmados no código na Fase 0**, pois o projeto muda rápido.
 
-| Peça | O que faz | Como usamos |
-| --- | --- | --- |
-| Servidor (Node/Bun, TypeScript, Effect) | Núcleo; clientes web e desktop falam com ele por WebSocket | Hospeda os módulos novos (router e memory) |
-| Orchestration Engine | Normaliza os eventos de todos os provedores (mudança de arquivo, comando, pedido de aprovação) | Fonte única para a extração automática de memória |
-| Provider Registry e adapters | Um adapter por agente (Codex via JSON-RPC em stdio, Claude via Agent SDK, Cursor, OpenCode) | Criação da thread no provedor escolhido pelo router |
-| Servidor MCP `t3-code` (em `/mcp`) | Mesmas ferramentas expostas a todos os provedores | Novas ferramentas `memory_*` e `project_*` |
-| Injeção de instruções (`provider-core`, `orchestrationInstructions`) | Já injeta instruções do T3 nas threads quando as ferramentas MCP estão presentes | Entrega das memórias recuperadas no início da thread |
-| Threads, projetos, worktrees, plan mode | Sessão isolada por thread; worktree por tarefa; PR pela interface | Reaproveitados sem mudança |
+| Peça                                                                 | O que faz                                                                                      | Como usamos                                          |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Servidor (Node/Bun, TypeScript, Effect)                              | Núcleo; clientes web e desktop falam com ele por WebSocket                                     | Hospeda os módulos novos (router e memory)           |
+| Orchestration Engine                                                 | Normaliza os eventos de todos os provedores (mudança de arquivo, comando, pedido de aprovação) | Fonte única para a extração automática de memória    |
+| Provider Registry e adapters                                         | Um adapter por agente (Codex via JSON-RPC em stdio, Claude via Agent SDK, Cursor, OpenCode)    | Criação da thread no provedor escolhido pelo router  |
+| Servidor MCP `t3-code` (em `/mcp`)                                   | Mesmas ferramentas expostas a todos os provedores                                              | Novas ferramentas `memory_*` e `project_*`           |
+| Injeção de instruções (`provider-core`, `orchestrationInstructions`) | Já injeta instruções do T3 nas threads quando as ferramentas MCP estão presentes               | Entrega das memórias recuperadas no início da thread |
+| Threads, projetos, worktrees, plan mode                              | Sessão isolada por thread; worktree por tarefa; PR pela interface                              | Reaproveitados sem mudança                           |
 
 **Lacunas que a spec cobre**
 
@@ -59,16 +59,16 @@ O T3 Code não tem modelo próprio. É um servidor local com interface web e des
 
 Repositório `pingdotgg/t3code`, commit `5b354026` (2026-10-25), lido em disco. **O T3 não tem memória persistente de projeto.** As ocorrências de "memory" no código são telemetria de RAM, caches e o stash do compositor. Há, porém, mecanismos de contexto que cobrem parte do problema:
 
-| Recurso | Onde | O que faz | Limite para este projeto |
-| --- | --- | --- | --- |
-| Handoff de contexto | `ContextHandoffService`; docs `context-handoffs.md`, `provider-switching-and-context.md` | Ao trocar de provedor, retomar ou fazer fork, entrega um resumo textual do histórico da mesma thread (só o delta desde a última participação do provedor). Itens truncados em 240 caracteres; teto inicial de 16.000 tokens (`T3CODE_CONTEXT_HANDOFF_TOKEN_CAP`) | Vale dentro de uma thread ou fork. Não atravessa threads nem sobrevive a uma thread nova |
-| Linhagem de threads | `thread-lineage-and-context-transfer.md` | Fork, merge-back e subagentes com transferência de contexto | Mesmo limite: relação entre threads ligadas, não memória do projeto |
-| MCP de orquestração | `mcp/toolkits/orchestrator`; `t3_thread_list`, `t3_thread_read`, `t3_thread_launch`, `delegate_task`, `create_threads` | O agente lista e lê qualquer thread do projeto e lança threads novas | Sem memória estruturada: achar um fato exige ler threads inteiras |
-| Busca de mensagens | `ThreadSearch.ts`; migração `069_ThreadMessageSearch` | Índice FTS5 (trigramas) das mensagens finalizadas | Serve a UI e à busca de threads; padrão reaproveitável para o índice da memória |
-| Injeção de instruções | `packages/provider-core/src/server/orchestrationInstructions.ts` | Seções de texto por provedor quando o MCP do T3 está presente (developer instructions do Codex, adapter do Claude, prefixo no ACP, Cursor, OpenCode, Pi) | Estático e igual para todos os projetos; cada seção ≤ 4.000 bytes porque o Codex trunca acima disso |
-| Compactação ociosa | `IdleCompactionService` | Manda `/compact` no Claude antes de o cache expirar | Beta, timers só em memória (reinício perde). É compactação, não memória |
-| Scanner de sessões | `project/AgentSessionScanner.ts` | Descobre transcritos locais de Claude e Codex para importar | Base para gerar memória retroativa |
-| Agentes externos via MCP | `docs/user/outside-agents.md` | Claude Code ou Codex no terminal se conectam ao `/mcp` do T3 com login e permissões | As ferramentas `memory_*` ficam disponíveis a CLIs fora do T3 sem servidor standalone |
+| Recurso                  | Onde                                                                                                                   | O que faz                                                                                                                                                                                                                                                        | Limite para este projeto                                                                            |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Handoff de contexto      | `ContextHandoffService`; docs `context-handoffs.md`, `provider-switching-and-context.md`                               | Ao trocar de provedor, retomar ou fazer fork, entrega um resumo textual do histórico da mesma thread (só o delta desde a última participação do provedor). Itens truncados em 240 caracteres; teto inicial de 16.000 tokens (`T3CODE_CONTEXT_HANDOFF_TOKEN_CAP`) | Vale dentro de uma thread ou fork. Não atravessa threads nem sobrevive a uma thread nova            |
+| Linhagem de threads      | `thread-lineage-and-context-transfer.md`                                                                               | Fork, merge-back e subagentes com transferência de contexto                                                                                                                                                                                                      | Mesmo limite: relação entre threads ligadas, não memória do projeto                                 |
+| MCP de orquestração      | `mcp/toolkits/orchestrator`; `t3_thread_list`, `t3_thread_read`, `t3_thread_launch`, `delegate_task`, `create_threads` | O agente lista e lê qualquer thread do projeto e lança threads novas                                                                                                                                                                                             | Sem memória estruturada: achar um fato exige ler threads inteiras                                   |
+| Busca de mensagens       | `ThreadSearch.ts`; migração `069_ThreadMessageSearch`                                                                  | Índice FTS5 (trigramas) das mensagens finalizadas                                                                                                                                                                                                                | Serve a UI e à busca de threads; padrão reaproveitável para o índice da memória                     |
+| Injeção de instruções    | `packages/provider-core/src/server/orchestrationInstructions.ts`                                                       | Seções de texto por provedor quando o MCP do T3 está presente (developer instructions do Codex, adapter do Claude, prefixo no ACP, Cursor, OpenCode, Pi)                                                                                                         | Estático e igual para todos os projetos; cada seção ≤ 4.000 bytes porque o Codex trunca acima disso |
+| Compactação ociosa       | `IdleCompactionService`                                                                                                | Manda `/compact` no Claude antes de o cache expirar                                                                                                                                                                                                              | Beta, timers só em memória (reinício perde). É compactação, não memória                             |
+| Scanner de sessões       | `project/AgentSessionScanner.ts`                                                                                       | Descobre transcritos locais de Claude e Codex para importar                                                                                                                                                                                                      | Base para gerar memória retroativa                                                                  |
+| Agentes externos via MCP | `docs/user/outside-agents.md`                                                                                          | Claude Code ou Codex no terminal se conectam ao `/mcp` do T3 com login e permissões                                                                                                                                                                              | As ferramentas `memory_*` ficam disponíveis a CLIs fora do T3 sem servidor standalone               |
 
 **O que isso muda na spec**
 
@@ -125,16 +125,16 @@ O router recebe o texto do prompt e decide três coisas: o projeto, a thread viv
 
 ### 4.1 Registro de projetos
 
-| Campo | Tipo | Descrição |
-| --- | --- | --- |
-| `id`, `slug` | string | Identificador estável e nome curto (`copiador`) |
-| `path` | string | Caminho absoluto do repositório |
-| `name`, `aliases[]` | string\[\] | Nomes pelos quais o usuário chama o projeto ("copy trading", "clínica") |
-| `description` | string | Uma ou duas frases sobre o que o projeto é |
-| `stack[]`, `keywords[]` | string\[\] | Tecnologias e termos de domínio ("MT5", "licitação", "Rails") |
-| `default_provider` | enum | Agente padrão do projeto |
-| `worktree_policy` | enum | `never`, `ask`, `always` |
-| `archived`, `last_active_at` | bool, datetime | Controle de ruído e recência |
+| Campo                        | Tipo           | Descrição                                                               |
+| ---------------------------- | -------------- | ----------------------------------------------------------------------- |
+| `id`, `slug`                 | string         | Identificador estável e nome curto (`copiador`)                         |
+| `path`                       | string         | Caminho absoluto do repositório                                         |
+| `name`, `aliases[]`          | string\[\]     | Nomes pelos quais o usuário chama o projeto ("copy trading", "clínica") |
+| `description`                | string         | Uma ou duas frases sobre o que o projeto é                              |
+| `stack[]`, `keywords[]`      | string\[\]     | Tecnologias e termos de domínio ("MT5", "licitação", "Rails")           |
+| `default_provider`           | enum           | Agente padrão do projeto                                                |
+| `worktree_policy`            | enum           | `never`, `ask`, `always`                                                |
+| `archived`, `last_active_at` | bool, datetime | Controle de ruído e recência                                            |
 
 **Identidade do projeto:** a chave de escopo da memória e do router é o `project_id` do T3, não o caminho. Quando vários projetos do T3 apontam para o mesmo repositório (monorepo, worktrees), a memória pertence ao projeto escolhido; worktrees do mesmo projeto compartilham a memória dele. Um monorepo com subprojetos distintos deve ser registrado como projetos separados, com `path` de subpasta e aliases próprios.
 
@@ -148,11 +148,11 @@ O router recebe o texto do prompt e decide três coisas: o projeto, a thread viv
 4. **Classificador LLM:** com os candidatos e seus perfis curtos, devolve JSON `{project, confidence, reason, alternatives[]}`. Modelo configurável (Haiku via CLI já autenticado, ou modelo local via Ollama). Se o modelo falhar ou estourar o tempo (5 s), o resultado do passo 2 é usado.
 5. **Política de decisão** (limiares configuráveis):
 
-| Confiança | Comportamento |
-| --- | --- |
-| ≥ 0,85 | Com `router.auto_start = true`: roteia e inicia a thread; mostra o chip "→ projeto" com opção de trocar nos primeiros segundos. Com `auto_start = false` (padrão até o G1): trata como a faixa seguinte e mostra o cartão de confirmação |
-| 0,50 a 0,85 | Mostra cartão de confirmação com os 3 melhores candidatos; nada inicia antes da escolha |
-| < 0,50 | Pergunta: lista de projetos, ou "é um projeto novo?" |
+| Confiança   | Comportamento                                                                                                                                                                                                                            |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ≥ 0,85      | Com `router.auto_start = true`: roteia e inicia a thread; mostra o chip "→ projeto" com opção de trocar nos primeiros segundos. Com `auto_start = false` (padrão até o G1): trata como a faixa seguinte e mostra o cartão de confirmação |
+| 0,50 a 0,85 | Mostra cartão de confirmação com os 3 melhores candidatos; nada inicia antes da escolha                                                                                                                                                  |
+| < 0,50      | Pergunta: lista de projetos, ou "é um projeto novo?"                                                                                                                                                                                     |
 
 **Casos especiais**
 
@@ -168,14 +168,14 @@ Cada projeto pode ter **threads vivas**: threads persistentes do T3 que já têm
 
 **Coerência do pedido com cada thread viva** (calculada sem LLM): BM25 do pedido contra o tópico e os arquivos tocados, mais a sobreposição entre os arquivos candidatos do pedido (seção 4.4) e os já tocados pela thread, mais um peso de recência.
 
-| Situação | Decisão |
-| --- | --- |
-| Thread viva ociosa e coerente | Envia o pedido a ela |
-| Thread viva coerente, mas ocupada | Enfileira como follow-up. Steering só se o usuário pedir; "nova thread" fica visível no chip |
-| Nenhuma thread viva coerente, ou o assunto mudou | Thread nova no workspace planejado em 4.4; recebe a memória do projeto (seção 5.4) |
-| Contexto da thread acima de 60% da capacidade | Thread nova com handoff e memória, em vez de empurrar mais contexto |
-| Projeto sem thread viva | Cria a thread principal no workspace planejado |
-| Plano em worktree (4.4) | Thread nova, porque o checkout é novo; a continuação da mesma feature reutiliza o worktree (`existing_worktree`) |
+| Situação                                         | Decisão                                                                                                          |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Thread viva ociosa e coerente                    | Envia o pedido a ela                                                                                             |
+| Thread viva coerente, mas ocupada                | Enfileira como follow-up. Steering só se o usuário pedir; "nova thread" fica visível no chip                     |
+| Nenhuma thread viva coerente, ou o assunto mudou | Thread nova no workspace planejado em 4.4; recebe a memória do projeto (seção 5.4)                               |
+| Contexto da thread acima de 60% da capacidade    | Thread nova com handoff e memória, em vez de empurrar mais contexto                                              |
+| Projeto sem thread viva                          | Cria a thread principal no workspace planejado                                                                   |
+| Plano em worktree (4.4)                          | Thread nova, porque o checkout é novo; a continuação da mesma feature reutiliza o worktree (`existing_worktree`) |
 
 Os 60% e os limiares de coerência são valores iniciais, a calibrar. **Higiene:** threads vivas ociosas há mais de 14 dias deixam de ser candidatas do router (valor inicial); a thread não é arquivada nem alterada no T3; a thread de um worktree vive até o merge ou o descarte do PR. Uma thread única com tarefas sem relação degrada as respostas; por isso uma mudança de assunto abre thread nova em vez de reutilizar a thread.
 
@@ -192,15 +192,15 @@ Hoje o usuário escolhe isso no T3 a cada thread. O orquestrador passa a recomen
 
 **Tabela de decisão** (limiares iniciais, a calibrar com o conjunto de teste)
 
-| Situação | Workspace |
-| --- | --- |
+| Situação                                                                                         | Workspace                                             |
+| ------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
 | Feature nova, ou estimativa > 5 arquivos, ou ≥ 3 camadas, ou migração ou mudança de dependências | Worktree, com branch nova a partir da base do projeto |
-| Correção pequena: ≤ 3 arquivos, uma camada, sem migração | Branch atual |
-| Branch atual é a principal ou protegida e o pedido altera código | Worktree (evita commitar na principal) |
-| Checkout com alterações não commitadas, ou outra thread ocupada tocando os mesmos arquivos | Worktree (isolamento) |
-| Continuação de uma feature que já tem worktree | Reaproveita o worktree existente |
-| Pergunta ou investigação (só leitura) | Branch atual, sem checkout novo |
-| Fronteira (por exemplo 4 a 5 arquivos) | Pergunta ao usuário, com a recomendação marcada |
+| Correção pequena: ≤ 3 arquivos, uma camada, sem migração                                         | Branch atual                                          |
+| Branch atual é a principal ou protegida e o pedido altera código                                 | Worktree (evita commitar na principal)                |
+| Checkout com alterações não commitadas, ou outra thread ocupada tocando os mesmos arquivos       | Worktree (isolamento)                                 |
+| Continuação de uma feature que já tem worktree                                                   | Reaproveita o worktree existente                      |
+| Pergunta ou investigação (só leitura)                                                            | Branch atual, sem checkout novo                       |
+| Fronteira (por exemplo 4 a 5 arquivos)                                                           | Pergunta ao usuário, com a recomendação marcada       |
 
 **Saída:** `{workspace: current|worktree|existing_worktree, reason, impact: {files_est, layers[], touches_migrations, touches_deps}, confidence}`. A política de confiança da seção 4.2 vale aqui também (automático, confirmar, perguntar). O chip mostra o plano e o motivo ("→ copiador · worktree · feature, \~12 arquivos"), com troca em um clique.
 
@@ -233,14 +233,14 @@ Neste modelo a memória é uma camada de apoio: a thread viva já carrega o cont
 
 Um arquivo SQLite local (`<T3 home>/userdata/memory.db`, permissão 600) com FTS5 para busca textual.
 
-| Tabela | Campos principais |
-| --- | --- |
-| `memories` | `id`, `scope` (`project` ou `global`), `project_id`, `kind`, `title`, `body`, `tags`, `status`, `confidence`, `pinned`, `source_thread_id`, `source_provider`, `origin` (`auto` ou `agent` ou `user`), `supersedes_id`, `content_hash`, `created_at`, `updated_at`, `last_used_at`, `use_count` |
-| `memories_fts` | Índice FTS5 sobre `title`, `body`, `tags` |
-| `thread_summaries` | `thread_id`, `project_id`, `summary`, `files_touched`, `outcome`, `created_at` |
-| `memory_events` | Log de auditoria: criação, edição, fusão, substituição, exclusão, uso |
-| `routing_feedback` | Pares (prompt, projeto correto) da seção 4.5 |
-| `workspace_feedback` | Casos da seção 4.4: pedido, impacto estimado, workspace recomendado e escolha do usuário |
+| Tabela               | Campos principais                                                                                                                                                                                                                                                                               |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `memories`           | `id`, `scope` (`project` ou `global`), `project_id`, `kind`, `title`, `body`, `tags`, `status`, `confidence`, `pinned`, `source_thread_id`, `source_provider`, `origin` (`auto` ou `agent` ou `user`), `supersedes_id`, `content_hash`, `created_at`, `updated_at`, `last_used_at`, `use_count` |
+| `memories_fts`       | Índice FTS5 sobre `title`, `body`, `tags`                                                                                                                                                                                                                                                       |
+| `thread_summaries`   | `thread_id`, `project_id`, `summary`, `files_touched`, `outcome`, `created_at`                                                                                                                                                                                                                  |
+| `memory_events`      | Log de auditoria: criação, edição, fusão, substituição, exclusão, uso                                                                                                                                                                                                                           |
+| `routing_feedback`   | Pares (prompt, projeto correto) da seção 4.5                                                                                                                                                                                                                                                    |
+| `workspace_feedback` | Casos da seção 4.4: pedido, impacto estimado, workspace recomendado e escolha do usuário                                                                                                                                                                                                        |
 
 **Tipos (`kind`):** `decision`, `convention`, `architecture`, `command`, `gotcha`, `preference`, `todo`. **Estados (`status`):** `active`, `pending_review`, `superseded`, `archived`.
 
@@ -270,16 +270,17 @@ O agente também pode gravar durante a thread pela ferramenta `memory_write` (`o
 - **Orçamento:** até 2 seções de 3.500 bytes cada (o Codex trunca entradas acima de 4.000 bytes), configurável. O limite vale por seção, não há teto global.
 - **Canal por adapter** (verificado no código):
 
-| Adapter | Canal | Memória dinâmica |
-| --- | --- | --- |
-| Codex | `additionalContext` por turno; memória entra como `untrusted` via `appContext` | Sim, por turno |
-| OpenCode | `session.instructions.entry.put`, reenviado quando o texto muda | Sim |
-| Claude | `systemPrompt.append`, fixado na criação da sessão | Só ao criar a sessão |
-| ACP | Prefixo no primeiro prompt ou ao mudar modo/MCP | Só no primeiro prompt |
-| Pi | Texto embutido na extensão gerada | Não, sem rebuild |
-| Cursor | Prefixo no prompt da primeira execução (`t3OrchestrationPromptForFirstRun`, `runOrdinal === 1`) | Só na primeira execução |
+| Adapter  | Canal                                                                                           | Memória dinâmica        |
+| -------- | ----------------------------------------------------------------------------------------------- | ----------------------- |
+| Codex    | `additionalContext` por turno; memória entra como `untrusted` via `appContext`                  | Sim, por turno          |
+| OpenCode | `session.instructions.entry.put`, reenviado quando o texto muda                                 | Sim                     |
+| Claude   | `systemPrompt.append`, fixado na criação da sessão                                              | Só ao criar a sessão    |
+| ACP      | Prefixo no primeiro prompt ou ao mudar modo/MCP                                                 | Só no primeiro prompt   |
+| Pi       | Texto embutido na extensão gerada                                                               | Não, sem rebuild        |
+| Cursor   | Prefixo no prompt da primeira execução (`t3OrchestrationPromptForFirstRun`, `runOrdinal === 1`) | Só na primeira execução |
 
-  Preferência: entregar pelo `appContext`/`ContextHandoffDelivery` existentes, com um ponto de contato único, e usar o caminho próprio do adapter só onde esse canal não chega. Em Claude, ACP, Cursor e Pi a memória vale do início da sessão em diante; só `memory_recall` atualiza depois.
+Preferência: entregar pelo `appContext`/`ContextHandoffDelivery` existentes, com um ponto de contato único, e usar o caminho próprio do adapter só onde esse canal não chega. Em Claude, ACP, Cursor e Pi a memória vale do início da sessão em diante; só `memory_recall` atualiza depois.
+
 - **Seleção:** perfil do projeto, memórias fixadas e todas as `convention`; depois as melhores por pontuação combinada de BM25 contra o prompt inicial, recência, uso e peso do `kind`.
 - **Formato:** lista curta com id e título, e uma linha final avisando que `memory_recall` busca mais detalhes.
 - **Segurança:** o bloco é rotulado como notas de projeto não confiáveis, que não podem alterar permissões nem instruções do usuário.
@@ -302,13 +303,13 @@ Nomes são propostas; devem seguir as convenções de RPC e de eventos já usada
 
 ### 6.1 Ferramentas MCP (visíveis a todos os provedores)
 
-| Ferramenta | Entrada | Retorno |
-| --- | --- | --- |
+| Ferramenta      | Entrada                                              | Retorno                                                           |
+| --------------- | ---------------------------------------------------- | ----------------------------------------------------------------- |
 | `memory_recall` | `query`, `project?`, `kinds?[]`, `limit?` (padrão 8) | Lista de memórias com `id`, `kind`, `title`, `body`, `updated_at` |
-| `memory_write` | `title`, `body`, `kind`, `tags?[]`, `pin?` | `id` e ação tomada (`created`, `merged`, `superseded`, `skipped`) |
-| `memory_update` | `id`, campos a alterar | Memória atualizada |
-| `memory_forget` | `id`, `reason?` | Confirmação (a exclusão fica no log de auditoria) |
-| `memory_list` | `project?`, `kind?`, `status?`, `cursor?` | Página de memórias |
+| `memory_write`  | `title`, `body`, `kind`, `tags?[]`, `pin?`           | `id` e ação tomada (`created`, `merged`, `superseded`, `skipped`) |
+| `memory_update` | `id`, campos a alterar                               | Memória atualizada                                                |
+| `memory_forget` | `id`, `reason?`                                      | Confirmação (a exclusão fica no log de auditoria)                 |
+| `memory_list`   | `project?`, `kind?`, `status?`, `cursor?`            | Página de memórias                                                |
 
 Perfil e lista de projetos usam o toolkit `t3_project_*` já existente, estendido com os campos da seção 4.1 (não há `project_info` nem `projects_list`). Os nomes finais seguem o prefixo `t3_` (por exemplo `t3_memory_recall`).
 
@@ -316,22 +317,22 @@ Perfil e lista de projetos usam o toolkit `t3_project_*` já existente, estendid
 
 ### 6.2 Comandos do servidor (cliente para servidor)
 
-| Grupo | Comandos |
-| --- | --- |
-| Router | `router.classify(prompt)`, `router.confirm(decisionId, project)`, `router.override(threadId, project)` |
-| Projetos | `projects.list`, `projects.register`, `projects.scan(roots)`, `projects.update`, `projects.archive` |
-| Memória | `memory.search`, `memory.list`, `memory.create`, `memory.update`, `memory.delete`, `memory.pin`, `memory.approve`, `memory.export(project)` |
-| Configuração | `settings.get`, `settings.update` |
+| Grupo        | Comandos                                                                                                                                    |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Router       | `router.classify(prompt)`, `router.confirm(decisionId, project)`, `router.override(threadId, project)`                                      |
+| Projetos     | `projects.list`, `projects.register`, `projects.scan(roots)`, `projects.update`, `projects.archive`                                         |
+| Memória      | `memory.search`, `memory.list`, `memory.create`, `memory.update`, `memory.delete`, `memory.pin`, `memory.approve`, `memory.export(project)` |
+| Configuração | `settings.get`, `settings.update`                                                                                                           |
 
 ### 6.3 Eventos (servidor para cliente)
 
-| Evento | Quando | Carga |
-| --- | --- | --- |
-| `router.decision` | Após classificar | `decisionId`, `project`, `confidence`, `alternatives[]`, `mode` (`auto`, `confirm`, `ask`) |
-| `router.thread_started` | Thread criada pelo router | `threadId`, `project`, `provider` |
-| `memory.injected` | Início da thread | `threadId`, ids das memórias, tokens usados |
-| `memory.extracted` | Fim da extração | `threadId`, candidatos, ações tomadas |
-| `memory.saved`, `memory.superseded`, `memory.pending` | Mudança no banco | `id`, `project`, `kind` |
+| Evento                                                | Quando                    | Carga                                                                                      |
+| ----------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------ |
+| `router.decision`                                     | Após classificar          | `decisionId`, `project`, `confidence`, `alternatives[]`, `mode` (`auto`, `confirm`, `ask`) |
+| `router.thread_started`                               | Thread criada pelo router | `threadId`, `project`, `provider`                                                          |
+| `memory.injected`                                     | Início da thread          | `threadId`, ids das memórias, tokens usados                                                |
+| `memory.extracted`                                    | Fim da extração           | `threadId`, candidatos, ações tomadas                                                      |
+| `memory.saved`, `memory.superseded`, `memory.pending` | Mudança no banco          | `id`, `project`, `kind`                                                                    |
 
 ### 6.4 Configuração
 
@@ -340,26 +341,26 @@ Arquivo `~/.t3code/config.toml` (também editável na UI):
 ```toml
 [router]
 enabled = true
-classifier = "lexical-only"    # ou "claude-haiku" ou "ollama:qwen2.5:7b" (após a medição da Fase 0)
-auto_start = false            # true só após o G1
+classifier = "lexical-only" # ou "claude-haiku" ou "ollama:qwen2.5:7b" (após a medição da Fase 0)
+auto_start = false # true só após o G1
 auto_threshold = 0.85
 confirm_threshold = 0.50
 timeout_ms = 5000
-workspace_mode = "ask"       # auto, ask ou manual
+workspace_mode = "ask" # auto, ask ou manual
 roots = ["~/projects"]
 
 [memory]
 enabled = true
-extractor = "off"              # ou "claude-haiku" ou "ollama:..." (após a medição da Fase 0)
-review_first_weeks = 2        # semanas em que a memória automática entra como pending_review
-inject_section_bytes = 3500   # por seção, máximo 2 seções
+extractor = "off" # ou "claude-haiku" ou "ollama:..." (após a medição da Fase 0)
+review_first_weeks = 2 # semanas em que a memória automática entra como pending_review
+inject_section_bytes = 3500 # por seção, máximo 2 seções
 min_confidence = 0.6
 max_active_per_project = 500
 archive_after_days = 90
 global_scope = false
 mirror_agents_md = false
 excluded_projects = []
-opt_in_only = true            # memória só nos projetos marcados
+opt_in_only = true # memória só nos projetos marcados
 ```
 
 ## 7. Interface (UI/UX)
@@ -382,14 +383,14 @@ A tela inicial passa a ser um compositor global. A lista de projetos continua ex
 
 ### 7.3 Painel de memória (por projeto)
 
-| Elemento | Função |
-| --- | --- |
-| Lista com filtros por `kind`, `status`, origem e provedor | Navegar e auditar |
-| Busca (FTS) | Achar um fato |
-| Edição inline, fixar, arquivar, apagar | Controle total do usuário |
-| Fila de `pending_review` | Aprovar ou rejeitar o que é sensível ou de baixa confiança |
-| Histórico de substituições | Ver o que foi corrigido e por quê |
-| Exportar (Markdown) e espelhar em `AGENTS.md` | Levar a memória para fora do T3 |
+| Elemento                                                  | Função                                                     |
+| --------------------------------------------------------- | ---------------------------------------------------------- |
+| Lista com filtros por `kind`, `status`, origem e provedor | Navegar e auditar                                          |
+| Busca (FTS)                                               | Achar um fato                                              |
+| Edição inline, fixar, arquivar, apagar                    | Controle total do usuário                                  |
+| Fila de `pending_review`                                  | Aprovar ou rejeitar o que é sensível ou de baixa confiança |
+| Histórico de substituições                                | Ver o que foi corrigido e por quê                          |
+| Exportar (Markdown) e espelhar em `AGENTS.md`             | Levar a memória para fora do T3                            |
 
 ### 7.4 Configurações
 
@@ -416,16 +417,16 @@ Todo o armazenamento e a orquestração rodam na máquina do usuário. O único 
 
 **Ameaças e controles**
 
-| Ameaça | Controle |
-| --- | --- |
-| Segredos vazando para o modelo ou para a memória | Redação por regex e entropia antes de enviar; memórias com padrão de segredo são rejeitadas; revisão manual para itens sensíveis |
-| Injeção de prompt via conteúdo de arquivo, página ou saída de ferramenta que vira "memória" | O extrator trata o material como dado; instruções detectadas viram `pending_review`; o bloco injetado é rotulado como notas não confiáveis |
-| Memória tentando ampliar permissões ou mudar regras de aprovação | O bloco de memória não tem efeito sobre aprovações; o servidor ignora qualquer pedido de permissão vindo de memória |
-| Roteamento errado levando o agente a editar o projeto errado | Sem execução na faixa de baixa confiança; chip de troca; aprovações do T3 e worktrees continuam valendo |
-| Memória envenenada por agente defeituoso | Origem e provedor gravados; limites de tamanho e taxa por thread; auditoria em `memory_events`; desfazer em lote por thread |
-| Dados de um projeto aparecendo em outro | Escopo por `project_id` em toda consulta; ferramentas só cruzam projetos se o parâmetro `project` for explícito; projetos podem ser excluídos da memória |
-| Outro processo do usuário lendo o `memory.db` direto | Arquivo com permissão 600, no T3 home; acesso de CLIs externos só pelo `/mcp` autenticado do T3 |
-| Dado sensível de cliente (por exemplo saúde) na memória ou no prompt do extrator | Redação não cobre código proprietário nem dados de negócio; `excluded_projects` e uma opção `memory.opt_in_only = true` (padrão: memória só nos projetos marcados); extrator local (`ollama:*`) recomendado para projetos sensíveis |
+| Ameaça                                                                                      | Controle                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Segredos vazando para o modelo ou para a memória                                            | Redação por regex e entropia antes de enviar; memórias com padrão de segredo são rejeitadas; revisão manual para itens sensíveis                                                                                                    |
+| Injeção de prompt via conteúdo de arquivo, página ou saída de ferramenta que vira "memória" | O extrator trata o material como dado; instruções detectadas viram `pending_review`; o bloco injetado é rotulado como notas não confiáveis                                                                                          |
+| Memória tentando ampliar permissões ou mudar regras de aprovação                            | O bloco de memória não tem efeito sobre aprovações; o servidor ignora qualquer pedido de permissão vindo de memória                                                                                                                 |
+| Roteamento errado levando o agente a editar o projeto errado                                | Sem execução na faixa de baixa confiança; chip de troca; aprovações do T3 e worktrees continuam valendo                                                                                                                             |
+| Memória envenenada por agente defeituoso                                                    | Origem e provedor gravados; limites de tamanho e taxa por thread; auditoria em `memory_events`; desfazer em lote por thread                                                                                                         |
+| Dados de um projeto aparecendo em outro                                                     | Escopo por `project_id` em toda consulta; ferramentas só cruzam projetos se o parâmetro `project` for explícito; projetos podem ser excluídos da memória                                                                            |
+| Outro processo do usuário lendo o `memory.db` direto                                        | Arquivo com permissão 600, no T3 home; acesso de CLIs externos só pelo `/mcp` autenticado do T3                                                                                                                                     |
+| Dado sensível de cliente (por exemplo saúde) na memória ou no prompt do extrator            | Redação não cobre código proprietário nem dados de negócio; `excluded_projects` e uma opção `memory.opt_in_only = true` (padrão: memória só nos projetos marcados); extrator local (`ollama:*`) recomendado para projetos sensíveis |
 
 O servidor MCP embutido no T3 mantém o modelo de acesso que o T3 já usa (login e permissões). Não há servidor standalone na v1.
 
@@ -435,14 +436,14 @@ O T3 muda rápido, então o fork precisa ser fácil de atualizar. A regra é: c�
 
 **Estrutura**
 
-| Item | Decisão |
-| --- | --- |
-| Repositório | Fork com `upstream` configurado; branch `main` do fork rebaseada no upstream toda semana |
-| Pacotes novos | `packages/router` (registro, pontuação, classificador), `packages/memory` (SQLite, extração, recuperação) |
-| Pontos de contato | (1) assinatura do fluxo de eventos do Orchestration Engine; (2) registro das novas ferramentas no servidor MCP `t3-code`; (3) ponto de injeção de instruções; (4) criação de thread; (5) rotas e componentes novos na UI |
-| Feature flags | `router.enabled` e `memory.enabled`; com as duas desligadas o comportamento é o do T3 original |
-| Testes de contrato | Um teste por ponto de contato, rodando no CI do fork; quebra no rebase acusa a mudança do upstream |
-| Banco | Migrações próprias em arquivo separado, dentro do T3 home (questão aberta 2) |
+| Item               | Decisão                                                                                                                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Repositório        | Fork com `upstream` configurado; branch `main` do fork rebaseada no upstream toda semana                                                                                                                                 |
+| Pacotes novos      | `packages/router` (registro, pontuação, classificador), `packages/memory` (SQLite, extração, recuperação)                                                                                                                |
+| Pontos de contato  | (1) assinatura do fluxo de eventos do Orchestration Engine; (2) registro das novas ferramentas no servidor MCP `t3-code`; (3) ponto de injeção de instruções; (4) criação de thread; (5) rotas e componentes novos na UI |
+| Feature flags      | `router.enabled` e `memory.enabled`; com as duas desligadas o comportamento é o do T3 original                                                                                                                           |
+| Testes de contrato | Um teste por ponto de contato, rodando no CI do fork; quebra no rebase acusa a mudança do upstream                                                                                                                       |
+| Banco              | Migrações próprias em arquivo separado, dentro do T3 home (questão aberta 2)                                                                                                                                             |
 
 **Contribuição ao upstream**
 
@@ -458,20 +459,20 @@ Seis fases entregam valor incremental; três gates decidem se o plano segue ou m
 
 Estimativa de 10 a 13 semanas para uma pessoa (sem base em medição). Cada fase depende da anterior. Os gates são pontos de decisão: se o critério falha, o plano muda antes de seguir.
 
-| Fase | Duração | Entrega | Critérios cobertos |
-| --- | --- | --- | --- |
-| 0. Verificação e bases | 1 semana | Fork configurado com `upstream`; checagem restante no código (padrão de reactor com `EffectWorker` e `EffectOutbox`); conjuntos dourados (100 prompts, 20 threads); medição de latência da `ModelClient`; decisões da seção 11 confirmadas | Pré-requisito de A1, A2, A4 |
-| 1. Router de projeto | 2 a 3 semanas | `packages/router`: registro e descoberta de projetos (4.1), menção explícita, BM25, política de confiança, classificador LLM opcional, `routing_feedback`; compositor global, chip e cartões de confirmação (7.1); criação da thread via `t3_thread_launch` | A1, A2 |
-| 2. Memória manual | 2 semanas | `packages/memory`: `memory.db`, FTS5, ferramentas `t3_memory_*`, injeção no início da thread (5.4) pelo canal de cada adapter, painel de memória e configurações, exclusão real | A3, A6, A7 (exclusão), A8 |
-| 3. Threads vivas e workspace | 2 a 3 semanas | Estado das threads vivas, coerência, fila e higiene (4.3); planejador de workspace (4.4) com `workspace_mode = ask`; `workspace_feedback` | B1 a B5 |
-| 4. Extração automática | 2 semanas | Reactor com `EffectWorker` e `EffectOutbox`; coleta, redação de segredos, extração, deduplicação, `pending_review`; semente (5.4.1); desfazer por thread | A4, A5, A7 (segredos) |
-| 5. Acabamento | 1 a 2 semanas, mais 2 de uso real | Espelho de `AGENTS.md` (5.5); embeddings, se aprovados; ajuste de limiares com o uso; testes de contrato de todos os pontos de contato | A8 completo |
+| Fase                         | Duração                           | Entrega                                                                                                                                                                                                                                                     | Critérios cobertos          |
+| ---------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| 0. Verificação e bases       | 1 semana                          | Fork configurado com `upstream`; checagem restante no código (padrão de reactor com `EffectWorker` e `EffectOutbox`); conjuntos dourados (100 prompts, 20 threads); medição de latência da `ModelClient`; decisões da seção 11 confirmadas                  | Pré-requisito de A1, A2, A4 |
+| 1. Router de projeto         | 2 a 3 semanas                     | `packages/router`: registro e descoberta de projetos (4.1), menção explícita, BM25, política de confiança, classificador LLM opcional, `routing_feedback`; compositor global, chip e cartões de confirmação (7.1); criação da thread via `t3_thread_launch` | A1, A2                      |
+| 2. Memória manual            | 2 semanas                         | `packages/memory`: `memory.db`, FTS5, ferramentas `t3_memory_*`, injeção no início da thread (5.4) pelo canal de cada adapter, painel de memória e configurações, exclusão real                                                                             | A3, A6, A7 (exclusão), A8   |
+| 3. Threads vivas e workspace | 2 a 3 semanas                     | Estado das threads vivas, coerência, fila e higiene (4.3); planejador de workspace (4.4) com `workspace_mode = ask`; `workspace_feedback`                                                                                                                   | B1 a B5                     |
+| 4. Extração automática       | 2 semanas                         | Reactor com `EffectWorker` e `EffectOutbox`; coleta, redação de segredos, extração, deduplicação, `pending_review`; semente (5.4.1); desfazer por thread                                                                                                    | A4, A5, A7 (segredos)       |
+| 5. Acabamento                | 1 a 2 semanas, mais 2 de uso real | Espelho de `AGENTS.md` (5.5); embeddings, se aprovados; ajuste de limiares com o uso; testes de contrato de todos os pontos de contato                                                                                                                      | A8 completo                 |
 
-| Gate | Quando | Critério para seguir |
-| --- | --- | --- |
-| G1 | Fim da Fase 1 | A1 e A2 atendidos no conjunto dourado. Se o p95 com LLM não fecha, o padrão fica `lexical-only` e o LLM segue opcional |
-| G2 | Fim da Fase 3 | B1 e B2 atendidos. Só com concordância medida de workspace ≥ 80% o padrão de `workspace_mode` pode passar de `ask` para `auto` |
-| G3 | Fim da Fase 4 | A4 e A5 atendidos. Se mais de 10% das memórias forem erradas, a extração fica desligada por padrão e só `memory_write` do agente permanece |
+| Gate | Quando        | Critério para seguir                                                                                                                       |
+| ---- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| G1   | Fim da Fase 1 | A1 e A2 atendidos no conjunto dourado. Se o p95 com LLM não fecha, o padrão fica `lexical-only` e o LLM segue opcional                     |
+| G2   | Fim da Fase 3 | B1 e B2 atendidos. Só com concordância medida de workspace ≥ 80% o padrão de `workspace_mode` pode passar de `ask` para `auto`             |
+| G3   | Fim da Fase 4 | A4 e A5 atendidos. Se mais de 10% das memórias forem erradas, a extração fica desligada por padrão e só `memory_write` do agente permanece |
 
 A Fase 5 só é dada como concluída após duas semanas de uso diário nos projetos reais.
 
@@ -479,26 +480,26 @@ Os losangos marcam os gates; a ordem das fases é sequencial porque cada uma dep
 
 **Critérios de aceite**
 
-| ID | Critério | Como medir |
-| --- | --- | --- |
-| A1 | Roteamento por menção e por texto | Conjunto de pelo menos 100 prompts reais dos projetos do usuário: acerto top-1 ≥ 90%; nenhuma execução em baixa confiança sem confirmação |
-| A2 | Latência do router | p50 < 300 ms no caminho léxico; p95 < 3 s com LLM |
-| A3 | Memória entre provedores | Fato gravado numa thread do Claude aparece numa thread nova do Codex e do OpenCode no mesmo projeto, e não aparece em outro projeto |
-| A4 | Extração automática | Em 20 threads de teste com mudanças: ≥ 70% geram ao menos uma memória útil; ≤ 10% de memórias erradas na revisão manual |
-| A5 | Deduplicação e substituição | Reprocessar a mesma thread não cria duplicadas; fato contraditório substitui o antigo e mantém o histórico |
-| A6 | Injeção dentro do limite | Nenhuma seção > 3.500 bytes; um teste por adapter (Codex, Claude, ACP, Cursor, OpenCode, Pi) confirma que o bloco chega ao agente |
-| A7 | Privacidade | Segredos plantados nos transcritos de teste não aparecem em `memory.db` nem na chamada ao modelo; exclusão remove também do índice FTS |
-| A8 | Isolamento do fork | Com `router.enabled = false` e `memory.enabled = false`, a suíte do upstream passa sem alteração; testes de contrato dos pontos de contato passam |
+| ID  | Critério                          | Como medir                                                                                                                                        |
+| --- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1  | Roteamento por menção e por texto | Conjunto de pelo menos 100 prompts reais dos projetos do usuário: acerto top-1 ≥ 90%; nenhuma execução em baixa confiança sem confirmação         |
+| A2  | Latência do router                | p50 < 300 ms no caminho léxico; p95 < 3 s com LLM                                                                                                 |
+| A3  | Memória entre provedores          | Fato gravado numa thread do Claude aparece numa thread nova do Codex e do OpenCode no mesmo projeto, e não aparece em outro projeto               |
+| A4  | Extração automática               | Em 20 threads de teste com mudanças: ≥ 70% geram ao menos uma memória útil; ≤ 10% de memórias erradas na revisão manual                           |
+| A5  | Deduplicação e substituição       | Reprocessar a mesma thread não cria duplicadas; fato contraditório substitui o antigo e mantém o histórico                                        |
+| A6  | Injeção dentro do limite          | Nenhuma seção > 3.500 bytes; um teste por adapter (Codex, Claude, ACP, Cursor, OpenCode, Pi) confirma que o bloco chega ao agente                 |
+| A7  | Privacidade                       | Segredos plantados nos transcritos de teste não aparecem em `memory.db` nem na chamada ao modelo; exclusão remove também do índice FTS            |
+| A8  | Isolamento do fork                | Com `router.enabled = false` e `memory.enabled = false`, a suíte do upstream passa sem alteração; testes de contrato dos pontos de contato passam |
 
 **Critérios do modelo de threads vivas e workspace**
 
-| ID | Critério | Como medir |
-| --- | --- | --- |
-| B1 | Escolha da thread viva | Em pelo menos 50 pedidos reais com mais de uma thread viva no projeto, a thread escolhida coincide com a que o usuário escolheria em ≥ 85% dos casos |
-| B2 | Planejador de workspace | Em pelo menos 50 pedidos reais, concordância com a escolha manual do usuário (branch atual ou worktree) ≥ 80%; nenhuma alteração direta na branch principal ou protegida sem confirmação |
-| B3 | Thread ocupada | O pedido é enfileirado sem perda nem duplicação, e a interface mostra a posição na fila |
-| B4 | Higiene de contexto | Thread acima do limite de contexto, ou com mudança de assunto, abre thread nova com handoff e memória, e o usuário vê o motivo |
-| B5 | Fallback | Com `router.workspace_mode = manual`, o fluxo é idêntico ao do T3 original |
+| ID  | Critério                | Como medir                                                                                                                                                                               |
+| --- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B1  | Escolha da thread viva  | Em pelo menos 50 pedidos reais com mais de uma thread viva no projeto, a thread escolhida coincide com a que o usuário escolheria em ≥ 85% dos casos                                     |
+| B2  | Planejador de workspace | Em pelo menos 50 pedidos reais, concordância com a escolha manual do usuário (branch atual ou worktree) ≥ 80%; nenhuma alteração direta na branch principal ou protegida sem confirmação |
+| B3  | Thread ocupada          | O pedido é enfileirado sem perda nem duplicação, e a interface mostra a posição na fila                                                                                                  |
+| B4  | Higiene de contexto     | Thread acima do limite de contexto, ou com mudança de assunto, abre thread nova com handoff e memória, e o usuário vê o motivo                                                           |
+| B5  | Fallback                | Com `router.workspace_mode = manual`, o fluxo é idêntico ao do T3 original                                                                                                               |
 
 **Estratégia de testes**
 
@@ -514,17 +515,17 @@ Os losangos marcam os gates; a ordem das fases é sequencial porque cada uma dep
 
 **Riscos**
 
-| Risco | Impacto | Mitigação |
-| --- | --- | --- |
-| O upstream muda a arquitetura (eventos, MCP, injeção) | Retrabalho no fork | Poucos pontos de contato, testes de contrato, rebase semanal |
-| Alguns adapters só injetam no início da sessão (Claude, ACP, Cursor, Pi) | Memória fica estática nesses provedores | Tabela de canais em 5.4; `memory_recall` cobre o resto |
-| Chamar o CLI como subprocesso para classificar tem partida fria de 1 a 3 s | O p95 < 3 s (A2) pode não fechar | Medir na Fase 0; se não fechar, `lexical-only` como padrão e LLM opcional |
-| Gatilhos por tempo (10 min ocioso, 8 turnos) com timers só em memória perdem trabalho no reinício | Memórias não extraídas | Persistir no `EffectOutbox` com `due_at` |
-| Roteamento errado | Agente trabalha no projeto errado | Três faixas de confiança, chip de troca, aprendizado com correções |
-| Memória de baixa qualidade (ruído, fatos errados) | Contexto poluído, agente induzido a erro | Limiar de confiança, deduplicação, painel de revisão, desfazer por thread, avaliação com conjunto de teste |
-| Custo e latência das chamadas ao modelo | Lentidão e gasto | Caminho léxico primeiro, modelo pequeno, extração em segundo plano, opção local |
-| Dados sensíveis na memória | Vazamento para outro agente ou projeto | Redação, escopo por projeto, `pending_review`, exclusão real |
-| Contexto injetado ocupa espaço útil | Respostas piores em tarefas pequenas | Orçamento em bytes (seção 5.4), só o relevante, medição de uso por memória |
+| Risco                                                                                             | Impacto                                  | Mitigação                                                                                                  |
+| ------------------------------------------------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| O upstream muda a arquitetura (eventos, MCP, injeção)                                             | Retrabalho no fork                       | Poucos pontos de contato, testes de contrato, rebase semanal                                               |
+| Alguns adapters só injetam no início da sessão (Claude, ACP, Cursor, Pi)                          | Memória fica estática nesses provedores  | Tabela de canais em 5.4; `memory_recall` cobre o resto                                                     |
+| Chamar o CLI como subprocesso para classificar tem partida fria de 1 a 3 s                        | O p95 < 3 s (A2) pode não fechar         | Medir na Fase 0; se não fechar, `lexical-only` como padrão e LLM opcional                                  |
+| Gatilhos por tempo (10 min ocioso, 8 turnos) com timers só em memória perdem trabalho no reinício | Memórias não extraídas                   | Persistir no `EffectOutbox` com `due_at`                                                                   |
+| Roteamento errado                                                                                 | Agente trabalha no projeto errado        | Três faixas de confiança, chip de troca, aprendizado com correções                                         |
+| Memória de baixa qualidade (ruído, fatos errados)                                                 | Contexto poluído, agente induzido a erro | Limiar de confiança, deduplicação, painel de revisão, desfazer por thread, avaliação com conjunto de teste |
+| Custo e latência das chamadas ao modelo                                                           | Lentidão e gasto                         | Caminho léxico primeiro, modelo pequeno, extração em segundo plano, opção local                            |
+| Dados sensíveis na memória                                                                        | Vazamento para outro agente ou projeto   | Redação, escopo por projeto, `pending_review`, exclusão real                                               |
+| Contexto injetado ocupa espaço útil                                                               | Respostas piores em tarefas pequenas     | Orçamento em bytes (seção 5.4), só o relevante, medição de uso por memória                                 |
 
 **Questões em aberto (decidir antes da Fase 1)**
 
@@ -540,27 +541,27 @@ Os losangos marcam os gates; a ordem das fases é sequencial porque cada uma dep
 
 Registradas na revisão com o autor; substituem os padrões propostos anteriores.
 
-| # | Decisão |
-| --- | --- |
-| 1 | Fork próprio com router e memória inteiros; a parte manual de memória só é oferecida ao upstream depois de estável, e nenhuma fase depende da resposta deles |
-| 2 | Banco separado `<T3 home>/userdata/memory.db` com migrações próprias; excluir um projeto passa a ser operação em dois bancos |
-| 3 | Router em `lexical-only` e extração `off` até medir a latência na Fase 0 |
-| 4 | Memória opt-in por projeto (`opt_in_only = true`) |
-| 5 | Router confirma sempre no começo (`auto_start = false`); o modo automático só liga depois do G1 |
-| 6 | Ordem das fases: router (Fase 1), depois memória manual (Fase 2) |
-| 7 | Linux e desktop na v1; mobile fica fora da UI e herda o servidor; macOS e Windows sem código próprio |
-| 8 | Conjunto dourado: montado a partir do histórico de threads do `statev2.sqlite`; o autor revisa uma amostra de cerca de 20 casos, priorizando prompts curtos ou genéricos |
-| 9 | Branches protegidas: `main`, `master`, `develop` e o que for listado por projeto; sem consultar o GitHub |
-| 10 | Extração só no fim de turno com mudança de arquivo e no fechamento da thread |
-| 11 | Nas duas primeiras semanas, memória automática entra como `pending_review`; depois, as de confiança alta entram como `active` |
-| 12 | Sem servidor MCP standalone na v1; CLIs externos usam o `/mcp` do T3 |
-| 13 | Espelho em `AGENTS.md` só na Fase 5, desligado por padrão |
-| 14 | Prompt com vários projetos: para e pergunta; não divide em threads na v1 |
-| 15 | Nome do fork definido no fim da Fase 0; até lá, o nome do upstream em todo o código |
-| 16 | G1 falho: o router segue no ar, sempre com cartão de confirmação; só abandona se o top-3 também for fraco |
-| 17 | G2 falho: `workspace_mode` fica em `ask`, com a recomendação marcada no chip |
-| 18 | Correções só são gravadas; limiares e pesos não se ajustam sozinhos na v1 |
-| 19 | A regra de 14 dias só tira a thread das candidatas do router, sem alterar o T3; com `maxTokens` nulo, o limiar de 60% não se aplica |
-| 20 | A spec fica em `docs/` do fork; o AGENTS.md do upstream não se aplica ao fork |
+| #   | Decisão                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Fork próprio com router e memória inteiros; a parte manual de memória só é oferecida ao upstream depois de estável, e nenhuma fase depende da resposta deles                                                                                                                                                                                                                                                                                                                                         |
+| 2   | Banco separado `<T3 home>/userdata/memory.db` com migrações próprias; excluir um projeto passa a ser operação em dois bancos                                                                                                                                                                                                                                                                                                                                                                         |
+| 3   | Router em `lexical-only` e extração `off` até medir a latência na Fase 0                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 4   | Memória opt-in por projeto (`opt_in_only = true`)                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 5   | Router confirma sempre no começo (`auto_start = false`); o modo automático só liga depois do G1                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 6   | Ordem das fases: router (Fase 1), depois memória manual (Fase 2)                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| 7   | Linux e desktop na v1; mobile fica fora da UI e herda o servidor; macOS e Windows sem código próprio                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 8   | Conjunto dourado: o `statev2.sqlite` do T3 tem só 3 threads e 1 projeto, então a fonte é o `~/.claude/history.jsonl` (63 prompts úteis, 76% de um único projeto). O conjunto fica fora do repositório (`~/t3-golden/`, permissão 600), completado por prompts sintéticos marcados como tal; o autor revisa uma amostra de cerca de 20 casos, priorizando prompts curtos ou genéricos. O A1 só vale como medida real depois que o log de decisões do router acumular prompts reais de vários projetos |
+| 9   | Branches protegidas: `main`, `master`, `develop` e o que for listado por projeto; sem consultar o GitHub                                                                                                                                                                                                                                                                                                                                                                                             |
+| 10  | Extração só no fim de turno com mudança de arquivo e no fechamento da thread                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 11  | Nas duas primeiras semanas, memória automática entra como `pending_review`; depois, as de confiança alta entram como `active`                                                                                                                                                                                                                                                                                                                                                                        |
+| 12  | Sem servidor MCP standalone na v1; CLIs externos usam o `/mcp` do T3                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 13  | Espelho em `AGENTS.md` só na Fase 5, desligado por padrão                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 14  | Prompt com vários projetos: para e pergunta; não divide em threads na v1                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 15  | Nome do fork definido no fim da Fase 0; até lá, o nome do upstream em todo o código                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 16  | G1 falho: o router segue no ar, sempre com cartão de confirmação; só abandona se o top-3 também for fraco                                                                                                                                                                                                                                                                                                                                                                                            |
+| 17  | G2 falho: `workspace_mode` fica em `ask`, com a recomendação marcada no chip                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 18  | Correções só são gravadas; limiares e pesos não se ajustam sozinhos na v1                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 19  | A regra de 14 dias só tira a thread das candidatas do router, sem alterar o T3; com `maxTokens` nulo, o limiar de 60% não se aplica                                                                                                                                                                                                                                                                                                                                                                  |
+| 20  | A spec fica em `docs/` do fork; o AGENTS.md do upstream não se aplica ao fork                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 Mantidos dos padrões anteriores: embeddings fora da v1; memória retroativa opt-in por projeto; memória global opt-in; distribuição a partir do repositório, sem registro na v1.
