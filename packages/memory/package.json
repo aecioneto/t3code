@@ -3,6 +3,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./block": {
+      "types": "./src/block.ts",
+      "import": "./src/block.ts"
+    },
     "./memory": {
       "types": "./src/memory.ts",
       "import": "./src/memory.ts"

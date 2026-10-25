@@ -1,3 +1,4 @@
+import { buildMemoryBlock } from "@t3tools/memory/block";
 import {
   looksLikeSecret,
   MAX_MEMORY_BODY_CHARS,
@@ -34,6 +35,9 @@ export class MemoryRejectedError extends Schema.TaggedError<MemoryRejectedError>
 
 export type MemoryServiceError = MemoryRejectedError | MemoryStore.MemoryStoreError;
 
+const CONTEXT_SCAN_LIMIT = 200;
+const CONTEXT_MATCH_LIMIT = 8;
+
 export class MemoryService extends Context.Service<
   MemoryService,
   {
@@ -67,6 +71,11 @@ export class MemoryService extends Context.Service<
       readonly projectId: string;
       readonly id: number;
     }) => Effect.Effect<void, MemoryServiceError>;
+    /** Notes worth showing at the start of a thread: pinned, conventions, then the best matches for the prompt. */
+    readonly contextBlock: (input: {
+      readonly projectId: string;
+      readonly prompt: string;
+    }) => Effect.Effect<string | null, MemoryServiceError>;
     readonly list: (input: {
       readonly projectId: string;
       readonly kind?: MemoryKind;
@@ -147,6 +156,27 @@ const make = Effect.gen(function* () {
           MemoryNotFoundError: () => new MemoryRejectedError({ reason: "not_found" }),
         }),
       );
+    }),
+    contextBlock: Effect.fn("MemoryService.contextBlock")(function* (input) {
+      if (!(yield* isEnabled(input.projectId))) return null;
+      const active = yield* store.list({
+        projectId: input.projectId,
+        status: "active",
+        limit: CONTEXT_SCAN_LIMIT,
+      });
+      const standing = active.filter((memory) => memory.pinned || memory.kind === "convention");
+      const matches = yield* store.search({
+        projectId: input.projectId,
+        query: input.prompt,
+        limit: CONTEXT_MATCH_LIMIT,
+      });
+      const seen = new Set<number>();
+      const ordered = [...standing, ...matches].filter((memory) => {
+        if (seen.has(memory.id)) return false;
+        seen.add(memory.id);
+        return true;
+      });
+      return buildMemoryBlock(ordered);
     }),
     list: Effect.fn("MemoryService.list")(function* (input) {
       yield* requireEnabled(input.projectId);

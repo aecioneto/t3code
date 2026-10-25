@@ -37,6 +37,8 @@ import * as Schedule from "effect/Schedule";
 import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
 
+import * as MemoryInjection from "../fork/MemoryInjection.ts";
+import * as MemoryService from "../fork/MemoryService.ts";
 import * as McpSessionRegistry from "../mcp/McpSessionRegistry.ts";
 import * as McpAppModelContext from "../mcpApps/McpAppModelContext.ts";
 import * as ServerSettings from "../serverSettings.ts";
@@ -606,6 +608,8 @@ export const layer: Layer.Layer<
     const providerEventIngestor = yield* ProviderEventIngestor.ProviderEventIngestorV2;
     const serverSettings = yield* ServerSettings.ServerSettingsService;
     const mcpAppModelContext = yield* McpAppModelContext.McpAppModelContext;
+    // Only the production server installs memory; runs without it get no project notes.
+    const memory = yield* Effect.serviceOption(MemoryService.MemoryService);
     const turnItemPositions = yield* TurnItemPositionStore.TurnItemPositionStoreV2;
     const finalizationObserver = yield* RunFinalizationService.RunFinalizationObserver;
 
@@ -1591,6 +1595,18 @@ export const layer: Layer.Layer<
           key: `mcp_app_${entry.itemId.replace(/[^\w.-]/g, "_")}`,
           text: entry.text,
         }));
+        const projectNotes = yield* MemoryInjection.memoryNotesFor({
+          memory,
+          projectId: input.appThread.projectId,
+          prompt: input.message.text,
+          providerTurnOrdinal: input.providerTurnOrdinal,
+        });
+        const withNotes = MemoryInjection.withMemoryNotes({
+          driver: input.session.driver,
+          message: input.message,
+          notes: projectNotes,
+        });
+        const turnContext = [...appContext, ...withNotes.appContext];
         const turnInput = {
           appThread: input.appThread,
           threadId: input.run.threadId,
@@ -1608,10 +1624,10 @@ export const layer: Layer.Layer<
           attemptId: input.attemptId,
           rootNodeId: input.rootNode.id,
           providerThread: input.providerThread,
-          message: input.message,
+          message: withNotes.message,
           modelSelection: input.modelSelection,
           runtimePolicy: input.runtimePolicy,
-          ...(appContext.length === 0 ? {} : { appContext }),
+          ...(turnContext.length === 0 ? {} : { appContext: turnContext }),
         };
         // Check after the context read: ingestion can settle the run while
         // it awaits. A failed ownership read fails the start below.
