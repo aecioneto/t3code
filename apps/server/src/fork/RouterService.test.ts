@@ -10,6 +10,7 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 
+import * as ManagedProjectFolders from "../project/ManagedProjectFolders.ts";
 import * as ProjectService from "../project/ProjectService.ts";
 import * as ForkDatabase from "./ForkDatabase.ts";
 import * as RouterService from "./RouterService.ts";
@@ -36,12 +37,21 @@ const shell = (id: string, title: string, workspaceRoot: string) =>
     updatedAt: "2026-01-01T00:00:00.000Z",
   });
 
-const layerFor = (shells: ReadonlyArray<ReturnType<typeof shell>>) =>
+const layerFor = (
+  shells: ReadonlyArray<ReturnType<typeof shell>>,
+  scratchProjectIds: ReadonlyArray<string> = [],
+) =>
   RouterService.layer().pipe(
     Layer.provideMerge(RouterStore.layer),
     Layer.provideMerge(ForkDatabase.layerMemory),
     Layer.provide(
       Layer.mock(ProjectService.ProjectService)({ listShells: () => Effect.succeed(shells) }),
+    ),
+    Layer.provide(
+      Layer.mock(ManagedProjectFolders.ManagedProjectFolders)({
+        namedProjectsRoot: "",
+        isScratchProject: (projectId) => Effect.succeed(scratchProjectIds.includes(projectId)),
+      }),
     ),
     Layer.provide(NodeServices.layer),
   );
@@ -131,4 +141,43 @@ it.effect("lets the user add aliases and keywords without losing what was derive
     assert.equal(found.candidates[0]?.projectId, "rota-id");
     assert.equal(yield* router.getProfile({ projectId: "ghost" }), undefined);
   }).pipe(Effect.provide(layerFor([shell("rota-id", "Rota", rota)])));
+});
+
+it.effect("derives keywords again for a stored profile that has none", () => {
+  const nashia = makeWorkspace("nashia", { "AGENTS.md": "# Nashia\n\nInternal tooling.\n" });
+  return Effect.gen(function* () {
+    const store = yield* RouterStore.RouterStore;
+    yield* store.upsertProfile({
+      id: "dev-id",
+      slug: "dev",
+      name: "dev",
+      aliases: [],
+      description: "",
+      stack: [],
+      keywords: [],
+    });
+    const router = yield* RouterService.RouterService;
+    const result = yield* router.classify({ prompt: "what is the status of the nashia project" });
+    assert.equal(result.candidates[0]?.projectId, "dev-id");
+  }).pipe(Effect.provide(layerFor([shell("dev-id", "dev", nashia)])));
+});
+
+it.effect("never offers the no-project scratch space as a destination", () => {
+  const scratch = makeWorkspace("scratch", { "README.md": "Scratch space for projectless chats." });
+  const rota = makeWorkspace("rota-scratch", { "README.md": "Gestão de licitações." });
+  return Effect.gen(function* () {
+    const router = yield* RouterService.RouterService;
+    const result = yield* router.classify({ prompt: "scratch space for projectless chats" });
+    assert.notInclude(
+      result.candidates.map((candidate) => candidate.projectId),
+      "scratch-id",
+    );
+  }).pipe(
+    Effect.provide(
+      layerFor(
+        [shell("scratch-id", "No project", scratch), shell("rota-id", "Rota", rota)],
+        ["scratch-id"],
+      ),
+    ),
+  );
 });

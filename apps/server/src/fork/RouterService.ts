@@ -7,6 +7,7 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 
+import * as ManagedProjectFolders from "../project/ManagedProjectFolders.ts";
 import * as ProjectService from "../project/ProjectService.ts";
 import * as ForkDatabase from "./ForkDatabase.ts";
 import * as RouterStore from "./RouterStore.ts";
@@ -57,19 +58,30 @@ export class RouterService extends Context.Service<
 const make = Effect.fn("RouterService.make")(function* (thresholds: RouterThresholds) {
   const store = yield* RouterStore.RouterStore;
   const projects = yield* ProjectService.ProjectService;
+  const folders = yield* ManagedProjectFolders.ManagedProjectFolders;
   const fileSystem = yield* FileSystem.FileSystem;
 
   // Profiles are derived once per project; edits made later are not overwritten.
+  // A profile with no aliases and no keywords predates keyword derivation or was never
+  // edited, so it is derived again.
   const syncProfiles = Effect.fn("RouterService.syncProfiles")(function* () {
-    const shells = yield* projects
+    const allShells = yield* projects
       .listShells()
       .pipe(
         Effect.mapError(
           (cause) => new RouterStore.RouterStoreError({ operation: "listProjects", cause }),
         ),
       );
+    // The no-project scratch space is what the router routes away from, never a destination.
+    const shells = yield* Effect.filter(allShells, (shell) =>
+      Effect.map(folders.isScratchProject(shell.id), (isScratch) => !isScratch),
+    );
     const stored = yield* store.listProfiles();
-    const known = new Set(stored.map((profile) => profile.id));
+    const known = new Set(
+      stored
+        .filter((profile) => profile.aliases.length > 0 || profile.keywords.length > 0)
+        .map((profile) => profile.id),
+    );
     for (const shell of shells) {
       if (known.has(shell.id)) continue;
       const entries = yield* fileSystem
@@ -80,8 +92,20 @@ const make = Effect.fn("RouterService.make")(function* (thresholds: RouterThresh
           fileSystem.readFileString(`${shell.workspaceRoot}/${name}`),
         ),
       ).pipe(Effect.orElseSucceed(() => null));
+      const agentsDoc = yield* Effect.firstSuccessOf(
+        ["AGENTS.md", "CLAUDE.md"].map((name) =>
+          fileSystem.readFileString(`${shell.workspaceRoot}/${name}`),
+        ),
+      ).pipe(Effect.orElseSucceed(() => null));
       yield* store.upsertProfile(
-        deriveProfile({ id: shell.id, title: shell.title, entries, readme }),
+        deriveProfile({
+          id: shell.id,
+          title: shell.title,
+          workspaceRoot: shell.workspaceRoot,
+          entries,
+          readme,
+          agentsDoc,
+        }),
       );
     }
     const live = new Set<string>(shells.map((shell) => shell.id));

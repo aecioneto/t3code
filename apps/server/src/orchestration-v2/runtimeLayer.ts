@@ -371,7 +371,10 @@ export const layerProduction = Layer.mergeAll(
   layerThreadLifecycleProvided,
   layerScheduledTaskProvided,
   layerSecretRequestsProvided,
-  RouterService.layerProduction.pipe(Layer.provide(layerProjectService)),
+  RouterService.layerProduction.pipe(
+    Layer.provide(layerProjectService),
+    Layer.provide(layerManagedProjectFoldersProvided),
+  ),
   MemoryService.layerProduction,
   MemoryPurge.layer.pipe(
     Layer.provide(MemoryStore.layerProduction),

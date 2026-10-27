@@ -42,6 +42,10 @@ const STOPWORDS = new Set([
   "for",
   "on",
   "is",
+  "project",
+  "projects",
+  "projeto",
+  "projetos",
 ]);
 
 export function normalize(text: string): string {
