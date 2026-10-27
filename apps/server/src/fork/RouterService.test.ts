@@ -56,7 +56,7 @@ const layerFor = (
     Layer.provide(NodeServices.layer),
   );
 
-it.effect("derives profiles from project folders and suggests, never starts", () => {
+it.effect("derives profiles from project folders and classifies without starting anything", () => {
   const copiador = makeWorkspace("copiador", {
     "README.md": "# Copiador\n\nCopiador de ordens MT5 com slippage e hedge.\n",
   });
@@ -68,7 +68,6 @@ it.effect("derives profiles from project folders and suggests, never starts", ()
     const router = yield* RouterService.RouterService;
     const result = yield* router.classify({ prompt: "ajuste o slippage do hedge no MT5" });
     assert.equal(result.via, "lexical");
-    assert.notEqual(result.mode, "auto");
     assert.equal(result.candidates[0]?.projectId, "copiador-id");
     const store = yield* RouterStore.RouterStore;
     const profiles = yield* store.listProfiles();
@@ -160,6 +159,30 @@ it.effect("derives keywords again for a stored profile that has none", () => {
     const result = yield* router.classify({ prompt: "what is the status of the nashia project" });
     assert.equal(result.candidates[0]?.projectId, "dev-id");
   }).pipe(Effect.provide(layerFor([shell("dev-id", "dev", nashia)])));
+});
+
+it.effect("follows a renamed project while keeping the user's keywords", () => {
+  const sistema = makeWorkspace("sistema", {});
+  return Effect.gen(function* () {
+    const store = yield* RouterStore.RouterStore;
+    yield* store.upsertProfile({
+      id: "sistema-id",
+      slug: "dev",
+      name: "dev",
+      aliases: [],
+      description: "",
+      stack: [],
+      keywords: ["clinica"],
+    });
+    const router = yield* RouterService.RouterService;
+    const profile = yield* router.getProfile({ projectId: "sistema-id" });
+    assert.deepEqual(
+      [profile?.name, profile?.slug, profile?.keywords],
+      ["Clinica-Sistema", "clinica-sistema", ["clinica"]],
+    );
+    const result = yield* router.classify({ prompt: "in project clinica-sistema: any news?" });
+    assert.equal(result.via, "mention");
+  }).pipe(Effect.provide(layerFor([shell("sistema-id", "Clinica-Sistema", sistema)])));
 });
 
 it.effect("never offers the no-project scratch space as a destination", () => {

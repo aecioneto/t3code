@@ -1,6 +1,6 @@
 import type { EnvironmentId, RouterCandidate } from "@t3tools/contracts";
 import { useAtomValue } from "@effect/atom-react";
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import { environmentPresentations } from "~/state/presentation";
 import { routerClassify } from "~/state/router";
@@ -13,6 +13,8 @@ export function useRouterSuggestion(input: {
   readonly environmentId: EnvironmentId | null;
   readonly prompt: string;
   readonly activeProjectId: string | null;
+  /** Called once per prompt when the router is sure enough to switch without asking. */
+  readonly onAutoSwitch: (candidate: RouterCandidate) => void;
 }): RouterCandidate | null {
   const classify = useAtomCommand(routerClassify, { reportFailure: false, reportDefect: false });
   const [answer, setAnswer] = useState<{
@@ -20,6 +22,7 @@ export function useRouterSuggestion(input: {
     readonly suggestion: RouterCandidate | null;
   } | null>(null);
   const { environmentId, activeProjectId } = input;
+  const autoSwitchedPrompt = useRef<string | null>(null);
   const prompt = input.prompt.trim();
   const serverConfigs = useAtomValue(environmentPresentations.serverConfigsAtom);
   const enabled =
@@ -29,11 +32,21 @@ export function useRouterSuggestion(input: {
 
   const runClassify = useEffectEvent(async (target: EnvironmentId, requestKey: string) => {
     const result = await classify({ environmentId: target, input: { prompt } });
-    setAnswer({
-      key: requestKey,
-      suggestion:
-        result._tag === "Success" ? pickRouterSuggestion(result.value, activeProjectId) : null,
-    });
+    const suggestion =
+      result._tag === "Success" ? pickRouterSuggestion(result.value, activeProjectId) : null;
+    setAnswer({ key: requestKey, suggestion });
+    // A reply for an earlier keystroke must not switch the draft, and a switch the user
+    // undoes is not repeated for the same prompt.
+    if (
+      suggestion !== null &&
+      result._tag === "Success" &&
+      result.value.mode === "auto" &&
+      requestKey === key &&
+      autoSwitchedPrompt.current !== prompt
+    ) {
+      autoSwitchedPrompt.current = prompt;
+      input.onAutoSwitch(suggestion);
+    }
   });
 
   useEffect(() => {

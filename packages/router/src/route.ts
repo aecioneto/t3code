@@ -13,7 +13,7 @@ export const DEFAULT_THRESHOLDS: RouterThresholds = {
   confirmThreshold: 0.5,
   directAccept: 0.8,
   directMargin: 0.25,
-  autoStart: false,
+  autoStart: true,
 };
 
 export interface RouteCandidate {

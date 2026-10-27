@@ -100,6 +100,14 @@ export function DraftHeroHeadline({
     environmentId: activeProjectRef?.environmentId ?? null,
     prompt: draftPrompt,
     activeProjectId: activeProjectRef?.projectId ?? null,
+    onAutoSwitch: (candidate) => {
+      const project = projects.find(
+        (entry) =>
+          entry.environmentId === activeProjectRef?.environmentId &&
+          entry.id === candidate.projectId,
+      );
+      if (project !== undefined) switchToRoutedProject(project);
+    },
   });
   const draftEnvMode = useComposerDraftStore((store) =>
     draftId ? (store.getDraftThread(draftId)?.envMode ?? "local") : "local",
@@ -257,6 +265,16 @@ export function DraftHeroHeadline({
             project.environmentId === activeProjectRef.environmentId &&
             project.id === routerSuggestion.projectId,
         ) ?? null);
+  // Projects often share a leaf name like "dev"; the folder tail tells them apart.
+  const suggestedProjectLabel =
+    suggestedProject === null
+      ? null
+      : projects.some(
+            (project) =>
+              project.id !== suggestedProject.id && project.title === suggestedProject.title,
+          )
+        ? `${suggestedProject.title} (${suggestedProject.workspaceRoot.split("/").filter(Boolean).slice(-3).join("/")})`
+        : suggestedProject.title;
   // A pick the router did not suggest is the correction worth learning from.
   const recordPickerChoice = (project: (typeof projects)[number]) => {
     const prompt = draftPrompt.trim();
@@ -290,22 +308,22 @@ export function DraftHeroHeadline({
       },
     });
   };
-  const acceptRouterSuggestion = () => {
-    if (suggestedProject === null || activeProjectRef === null) {
+  const switchToRoutedProject = (project: (typeof projects)[number]) => {
+    if (activeProjectRef === null) {
       return;
     }
     void recordRouterChoice({
       environmentId: activeProjectRef.environmentId,
       input: {
         prompt: draftPrompt.trim(),
-        suggestedProjectId: suggestedProject.id,
-        chosenProjectId: suggestedProject.id,
+        suggestedProjectId: project.id,
+        chosenProjectId: project.id,
       },
     });
-    selectProject(
-      suggestedProject,
-      deriveLogicalProjectKeyFromSettings(suggestedProject, projectGroupingSettings),
-    );
+    selectProject(project, deriveLogicalProjectKeyFromSettings(project, projectGroupingSettings));
+  };
+  const acceptRouterSuggestion = () => {
+    if (suggestedProject !== null) switchToRoutedProject(suggestedProject);
   };
   const startScratch = async (): Promise<boolean> => {
     if (scratchTargetEnvironmentId === null || isScratchDraft) {
@@ -466,7 +484,7 @@ export function DraftHeroHeadline({
             className="pointer-events-auto"
             onClick={acceptRouterSuggestion}
           >
-            Looks like {suggestedProject.title}. Switch project
+            Looks like {suggestedProjectLabel}. Switch project
           </InlineButton>
         </p>
       )}

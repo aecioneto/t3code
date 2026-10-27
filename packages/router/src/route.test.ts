@@ -42,16 +42,14 @@ describe("detectMention", () => {
 
 describe("route", () => {
   it("treats an explicit mention as full confidence", () => {
-    const decision = route("@rota crie relatório", profiles, {
-      ...DEFAULT_THRESHOLDS,
-      autoStart: true,
-    });
+    const decision = route("@rota crie relatório", profiles);
     expect(decision).toMatchObject({ via: "mention", mode: "auto", confidence: 1 });
     expect(decision.candidates[0]?.profile.slug).toBe("rota");
   });
 
   it("asks for confirmation instead of starting while autoStart is off", () => {
-    expect(route("@rota crie relatório", profiles).mode).toBe("confirm");
+    const thresholds = { ...DEFAULT_THRESHOLDS, autoStart: false };
+    expect(route("@rota crie relatório", profiles, thresholds).mode).toBe("confirm");
   });
 
   it("ranks the matching project first on lexical evidence", () => {

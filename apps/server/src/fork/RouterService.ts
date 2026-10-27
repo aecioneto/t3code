@@ -1,4 +1,4 @@
-import { deriveProfile } from "@t3tools/router/derive";
+import { deriveProfile, slugify } from "@t3tools/router/derive";
 import type { ProjectProfile } from "@t3tools/router/profile";
 import { DEFAULT_THRESHOLDS, route, type RouterThresholds } from "@t3tools/router/route";
 import * as Context from "effect/Context";
@@ -63,7 +63,7 @@ const make = Effect.fn("RouterService.make")(function* (thresholds: RouterThresh
 
   // Profiles are derived once per project; edits made later are not overwritten.
   // A profile with no aliases and no keywords predates keyword derivation or was never
-  // edited, so it is derived again.
+  // edited, so it is derived again; every profile follows its project's current title.
   const syncProfiles = Effect.fn("RouterService.syncProfiles")(function* () {
     const allShells = yield* projects
       .listShells()
@@ -77,13 +77,21 @@ const make = Effect.fn("RouterService.make")(function* (thresholds: RouterThresh
       Effect.map(folders.isScratchProject(shell.id), (isScratch) => !isScratch),
     );
     const stored = yield* store.listProfiles();
-    const known = new Set(
+    const known = new Map(
       stored
         .filter((profile) => profile.aliases.length > 0 || profile.keywords.length > 0)
-        .map((profile) => profile.id),
+        .map((profile) => [profile.id, profile] as const),
     );
     for (const shell of shells) {
-      if (known.has(shell.id)) continue;
+      const existing = known.get(shell.id);
+      if (existing !== undefined) {
+        // A renamed project keeps its edited aliases and keywords but takes the new name.
+        const slug = slugify(shell.title) || shell.id;
+        if (existing.name !== shell.title || existing.slug !== slug) {
+          yield* store.upsertProfile({ ...existing, name: shell.title, slug });
+        }
+        continue;
+      }
       const entries = yield* fileSystem
         .readDirectory(shell.workspaceRoot)
         .pipe(Effect.orElseSucceed(() => []));
