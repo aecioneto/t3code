@@ -10,6 +10,7 @@ import * as MemoryPurge from "../fork/MemoryPurge.ts";
 import * as MemoryService from "../fork/MemoryService.ts";
 import * as MemoryStore from "../fork/MemoryStore.ts";
 import * as RouterService from "../fork/RouterService.ts";
+import * as PreviewAgentActivity from "../preview/PreviewAgentActivity.ts";
 import * as McpAppRequests from "../mcpApps/McpAppRequests.ts";
 import * as ProviderSessionRuntime from "../persistence/ProviderSessionRuntime.ts";
 import * as TextGeneration from "../textGeneration/TextGeneration.ts";
@@ -157,6 +158,7 @@ const layerRunExecutionServiceProvided = RunExecutionService.layer.pipe(
   Layer.provide(
     Layer.mergeAll(
       McpAppModelContext.layer,
+      PreviewAgentActivity.layer,
       layerCheckpointServiceProvided,
       layerEventSinkProvided,
       IdAllocator.layer,
