@@ -118,6 +118,7 @@ import { useClientSettings } from "../hooks/useSettings";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useNowMinute } from "../hooks/useNowMinute";
+import { useRoutedNewThread } from "../hooks/useRoutedNewThread";
 import {
   useEnvironmentIdentities,
   useConnectedEnvironmentIds,
@@ -2688,7 +2689,12 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     updateThreadJumpHintsVisibility(shouldShowJumpHintsNow);
   }, [shouldShowJumpHintsNow, updateThreadJumpHintsVisibility]);
 
+  const startRoutedNewThread = useRoutedNewThread();
   const handleNewThreadClick = (event?: ReactMouseEvent) => {
+    if (!event?.shiftKey && startRoutedNewThread()) {
+      if (isMobile) setOpenMobile(false);
+      return;
+    }
     if (shouldCreateNewThreadInCurrentProject(event?.shiftKey ?? false, projectGroups.length)) {
       if (isMobile) setOpenMobile(false);
       void startNewThreadFromContext({

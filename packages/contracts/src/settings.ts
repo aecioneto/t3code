@@ -1170,6 +1170,8 @@ export const ServerSettings = Schema.Struct({
   guestSharingEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   /** Beta (fork): the draft header suggests a project from the prompt. Off sends nothing to the router. */
   routerEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+  /** Beta (fork): with the router on, a new thread starts without a project so the router picks one. */
+  newThreadWithoutProject: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   /** Beta (fork): projects whose threads read and write shared memory. Memory is opt-in per project. */
   memoryEnabledProjectIds: Schema.Array(Schema.String).pipe(
     Schema.withDecodingDefault(Effect.succeed([])),
@@ -1522,6 +1524,7 @@ export const ServerSettingsPatch = Schema.Struct({
   snoozeLimitedThreads: Schema.optionalKey(Schema.Boolean),
   guestSharingEnabled: Schema.optionalKey(Schema.Boolean),
   routerEnabled: Schema.optionalKey(Schema.Boolean),
+  newThreadWithoutProject: Schema.optionalKey(Schema.Boolean),
   memoryEnabledProjectIds: Schema.optionalKey(Schema.Array(Schema.String)),
   memoryExtractor: Schema.optionalKey(Schema.String),
   backgroundActivity: Schema.optionalKey(

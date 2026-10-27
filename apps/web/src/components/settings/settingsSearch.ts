@@ -361,6 +361,13 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["beta router project suggest switch draft prompt"],
   },
   {
+    id: "new-thread-without-project",
+    title: "New threads start without a project",
+    to: "/settings/beta",
+    scope: "environment",
+    searchTerms: ["beta router new thread no project without scratch"],
+  },
+  {
     id: "memory-extractor",
     title: "Write notes automatically",
     to: "/settings/beta",

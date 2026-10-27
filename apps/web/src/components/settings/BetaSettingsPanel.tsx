@@ -66,6 +66,22 @@ export function BetaSettingsPanel() {
             />
           }
         />
+        <SettingsRow
+          serverScoped
+          {...searchableSetting("new-thread-without-project")}
+          settingKeys={["newThreadWithoutProject"]}
+          description="With project suggestions on, the New thread button starts without a project and the suggestion picks one as you write. Shift-click still starts in the current project."
+          control={
+            <ScopedSwitch
+              settingKeys={["newThreadWithoutProject"]}
+              checked={settings.newThreadWithoutProject}
+              onCheckedChange={(checked) =>
+                updateSettings({ newThreadWithoutProject: Boolean(checked) })
+              }
+              aria-label="New threads start without a project"
+            />
+          }
+        />
         {/* Clerk is only mounted when this build has T3 Connect. */}
         {hasCloudPublicConfig() ? <GuestLinksRowWithSignIn /> : <GuestLinksRow />}
       </SettingsSection>

@@ -380,6 +380,14 @@ describe("fork features stay off by default", () => {
     });
   });
 
+  it("starts new threads without a project once the router is on", () => {
+    expect(DEFAULT_SERVER_SETTINGS.newThreadWithoutProject).toBe(true);
+    expect(decodeServerSettings({}).newThreadWithoutProject).toBe(true);
+    expect(decodeServerSettingsPatch({ newThreadWithoutProject: false })).toEqual({
+      newThreadWithoutProject: false,
+    });
+  });
+
   it("reads settings saved before the fork fields existed", () => {
     const decoded = decodeServerSettings({});
     expect(decoded.routerEnabled).toBe(false);
