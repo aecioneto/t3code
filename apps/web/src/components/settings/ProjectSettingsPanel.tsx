@@ -499,6 +499,19 @@ function ProjectDetail({
               />
             }
           />
+          {hasMultipleCheckouts ? null : (
+            <SettingsRow
+              title="Folder"
+              description={
+                <Tooltip>
+                  <TooltipTrigger render={<span className="block truncate" />}>
+                    {group.memberProjects[0]?.workspaceRoot}
+                  </TooltipTrigger>
+                  <TooltipPopup>{group.memberProjects[0]?.workspaceRoot}</TooltipPopup>
+                </Tooltip>
+              }
+            />
+          )}
           <SettingsRow
             title="Project icon"
             description={
