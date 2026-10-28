@@ -38,6 +38,10 @@
     "./codemap": {
       "types": "./src/codemap.ts",
       "import": "./src/codemap.ts"
+    },
+    "./symbols": {
+      "types": "./src/symbols.ts",
+      "import": "./src/symbols.ts"
     }
   },
   "scripts": {

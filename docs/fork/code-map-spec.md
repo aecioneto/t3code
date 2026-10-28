@@ -76,10 +76,11 @@ CREATE VIRTUAL TABLE code_fts USING fts5(name, path, content='', tokenize='unico
 **Parsing, in two stages.**
 
 1. File level (all languages): a row in `code_files` with path, size and language from the extension. This alone gives the directory tree.
-2. Symbol level (selected languages): extract definitions.
-   - First version: TypeScript/JavaScript, PHP, Ruby, using `web-tree-sitter` (WASM grammars, no native build, works in the Electron-bundled server). Grammars load lazily the first time a file of that language is seen.
-   - Per language, one query file that captures class/function/method/const definitions and, where cheap, framework entry points (Laravel `Route::` calls, Rails `routes.rb`, Effect `Context.Service` names). Route/table kinds are optional in the first cut.
-   - Parse failures never fail the run: the file keeps its row with `language` set and no symbols.
+2. Symbol level (selected languages): extract definitions with a dependency-free, line-based extractor (`packages/memory/src/symbols.ts`) for TypeScript/JavaScript, PHP (including Laravel routes), Ruby and Python.
+   - Why not tree-sitter in the first version: the server ships as a bundle, a single executable and inside Electron, and WASM grammar files would need separate packaging in each. The extractor is pure TypeScript and ships everywhere.
+   - Trade-off: it sees declarations that start a line, so a signature split over several lines is missed. A wrong or missing entry costs the agent one extra read, never a wrong edit.
+   - Upgrade path: `extractSymbols(language, source)` is the only seam. A tree-sitter implementation can replace a language's extractor later without touching storage, tools or the map.
+   - Parse failures never fail the run: the file keeps its row with no symbols.
 
 **When it runs.**
 
@@ -158,6 +159,6 @@ After adding the tools, re-measure `mcpToolListJsonBytes` and update `agentConte
 
 ## 12. Open decisions
 
-- Grammar delivery: bundle the WASM grammars in the server package (larger install) or download on first use (needs network and a cache directory).
+- Whether and when to move a language to tree-sitter (see §4); packaging for the bundle, SEA executable and Electron is the open work.
 - Whether the map should also be offered to the project router as extra keywords (file and symbol names), which could improve project matching.
 - Whether to expose a "Download map" export later for portability.
