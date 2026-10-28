@@ -126,6 +126,8 @@ export const RPC_REQUIRED_SCOPES = {
   [WS_METHODS.memoryUndoThread]: AuthOrchestrationOperateScope,
   [WS_METHODS.memorySeed]: AuthOrchestrationOperateScope,
   [WS_METHODS.memoryMirror]: AuthOrchestrationOperateScope,
+  [WS_METHODS.codeMapStatus]: AuthOrchestrationReadScope,
+  [WS_METHODS.codeMapRebuild]: AuthOrchestrationOperateScope,
   [WS_METHODS.scheduledTasksList]: AuthOrchestrationReadScope,
   [WS_METHODS.scheduledTasksSubscribe]: AuthOrchestrationReadScope,
   [WS_METHODS.secretsAnswerRequest]: AuthOrchestrationOperateScope,

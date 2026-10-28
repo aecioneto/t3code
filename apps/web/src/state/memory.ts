@@ -42,3 +42,15 @@ export const memoryMirror = createEnvironmentRpcCommand(connectionAtomRuntime, {
   label: "environment-command:memory:mirror",
   tag: WS_METHODS.memoryMirror,
 });
+
+export const codeMapStatusQuery = createEnvironmentRpcQueryAtomFamily(connectionAtomRuntime, {
+  label: "environment-data:code-map:status",
+  tag: WS_METHODS.codeMapStatus,
+  staleTimeMs: 0,
+  idleTtlMs: 60_000,
+});
+
+export const codeMapRebuild = createEnvironmentRpcCommand(connectionAtomRuntime, {
+  label: "environment-command:code-map:rebuild",
+  tag: WS_METHODS.codeMapRebuild,
+});

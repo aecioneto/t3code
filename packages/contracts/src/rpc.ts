@@ -21,6 +21,13 @@ import {
   ProjectMemory,
 } from "./memory.ts";
 import {
+  CodeMapError,
+  CodeMapRebuildInput,
+  CodeMapRebuildResult,
+  CodeMapStatus,
+  CodeMapStatusInput,
+} from "./codeMap.ts";
+import {
   RouterClassifyInput,
   RouterClassifyResult,
   RouterError,
@@ -460,6 +467,8 @@ export const WS_METHODS = {
   memoryUndoThread: "memory.undoThread",
   memorySeed: "memory.seed",
   memoryMirror: "memory.mirror",
+  codeMapStatus: "codeMap.status",
+  codeMapRebuild: "codeMap.rebuild",
   mcpAppsUpdateModelContext: "mcpApps.updateModelContext",
 
   providerUploadFeedback: "provider.uploadFeedback",
@@ -1499,6 +1508,18 @@ const WsMemoryMirrorRpc = Rpc.make(WS_METHODS.memoryMirror, {
   error: Schema.Union([MemoryError, EnvironmentAuthorizationError]),
 });
 
+const WsCodeMapStatusRpc = Rpc.make(WS_METHODS.codeMapStatus, {
+  payload: CodeMapStatusInput,
+  success: CodeMapStatus,
+  error: Schema.Union([CodeMapError, EnvironmentAuthorizationError]),
+});
+
+const WsCodeMapRebuildRpc = Rpc.make(WS_METHODS.codeMapRebuild, {
+  payload: CodeMapRebuildInput,
+  success: CodeMapRebuildResult,
+  error: Schema.Union([CodeMapError, EnvironmentAuthorizationError]),
+});
+
 const WsMcpAppsReadResourceRpc = Rpc.make(WS_METHODS.mcpAppsReadResource, {
   payload: McpAppReadResourceInput,
   success: McpAppReadResourceResult,
@@ -2146,6 +2167,8 @@ export const WsRpcGroup = RpcGroup.make(
   WsMemoryUndoThreadRpc,
   WsMemorySeedRpc,
   WsMemoryMirrorRpc,
+  WsCodeMapStatusRpc,
+  WsCodeMapRebuildRpc,
   WsScheduledTasksListRpc,
   WsScheduledTasksSubscribeRpc,
   WsScheduledTasksUpsertRpc,

@@ -49,6 +49,7 @@ import * as EnvironmentTheme from "./environmentTheme.ts";
 import * as GitWorkflowService from "./git/GitWorkflowService.ts";
 import * as HostResources from "./resourceTelemetry/HostResources.ts";
 import * as ManagedProjectFolders from "./project/ManagedProjectFolders.ts";
+import * as CodeMapService from "./fork/CodeMapService.ts";
 import * as MemoryMirror from "./fork/MemoryMirror.ts";
 import * as MemorySeed from "./fork/MemorySeed.ts";
 import * as MemoryService from "./fork/MemoryService.ts";
@@ -425,6 +426,7 @@ const layerUnusedConfigRpcServices = Layer.mergeAll(
   Layer.mock(MemoryService.MemoryService)({}),
   Layer.mock(MemorySeed.MemorySeed)({}),
   Layer.mock(MemoryMirror.MemoryMirror)({}),
+  Layer.mock(CodeMapService.CodeMapService)({}),
   Layer.mock(WorkspacePlanService.WorkspacePlanService)({}),
   Layer.mock(ModelManifest.ModelManifest)({}),
   Layer.mock(OrchestrationEventStore.OrchestrationEventStore)({}),
