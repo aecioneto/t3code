@@ -6,6 +6,7 @@ import * as Schema from "effect/Schema";
 import * as Scope from "effect/Scope";
 
 import * as ServerSettings from "../serverSettings.ts";
+import * as VcsProcess from "../vcs/VcsProcess.ts";
 import * as CodeIndexer from "./CodeIndexer.ts";
 import * as CodeMapStore from "./CodeMapStore.ts";
 
@@ -184,3 +185,10 @@ const make = Effect.gen(function* () {
 });
 
 export const layer = Layer.effect(CodeMapService, make);
+
+// The database client stays inside this layer; the main SqlClient is not shared.
+export const layerProduction = layer.pipe(
+  Layer.provide(CodeIndexer.layer),
+  Layer.provide(VcsProcess.layer),
+  Layer.provide(CodeMapStore.layerProduction),
+);

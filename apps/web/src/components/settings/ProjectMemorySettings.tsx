@@ -49,42 +49,70 @@ function ProjectMemoryRow({
     project.environmentId,
     (settings) => settings.memoryEnabledProjectIds,
   );
+  const codeMapIds = useEnvironmentSettings(
+    project.environmentId,
+    (settings) => settings.codeMapEnabledProjectIds,
+  );
   const updateSettings = useAtomCommand(serverEnvironment.updateSettings, {
     reportFailure: false,
   });
   const [open, setOpen] = useState(false);
   const enabled = enabledIds.includes(project.id);
 
-  const toggle = async (checked: boolean) => {
+  const codeMapEnabled = codeMapIds.includes(project.id);
+
+  const save = async (
+    key: "memoryEnabledProjectIds" | "codeMapEnabledProjectIds",
+    current: ReadonlyArray<string>,
+    checked: boolean,
+    failure: string,
+  ) => {
     const next = checked
-      ? [...enabledIds, project.id]
-      : enabledIds.filter((projectId) => projectId !== project.id);
+      ? [...current, project.id]
+      : current.filter((projectId) => projectId !== project.id);
     const result = await updateSettings({
       environmentId: project.environmentId,
-      input: { patch: { memoryEnabledProjectIds: next } },
+      input: { patch: { [key]: next } },
     });
     if (result._tag !== "Success") {
-      toastManager.add({ type: "error", title: "Memory setting not saved" });
+      toastManager.add({ type: "error", title: failure });
     }
   };
 
   return (
     <SettingsRow
       title={project.title}
-      description={
-        enabled
-          ? "Agents in this project can save and recall notes."
-          : "Off. Agents in this project cannot read or save notes."
-      }
+      description="Memory lets agents save and recall notes. Code map lets them look up the project's files without searching."
       control={
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={() => setOpen((value) => !value)}>
             {open ? "Hide notes" : "Notes"}
           </Button>
+          <span className="text-muted-foreground text-xs">Memory</span>
           <Switch
             checked={enabled}
-            onCheckedChange={(checked) => void toggle(Boolean(checked))}
+            onCheckedChange={(checked) =>
+              void save(
+                "memoryEnabledProjectIds",
+                enabledIds,
+                Boolean(checked),
+                "Memory setting not saved",
+              )
+            }
             aria-label={`Memory for ${project.title}`}
+          />
+          <span className="text-muted-foreground text-xs">Code map</span>
+          <Switch
+            checked={codeMapEnabled}
+            onCheckedChange={(checked) =>
+              void save(
+                "codeMapEnabledProjectIds",
+                codeMapIds,
+                Boolean(checked),
+                "Code map setting not saved",
+              )
+            }
+            aria-label={`Code map for ${project.title}`}
           />
         </div>
       }

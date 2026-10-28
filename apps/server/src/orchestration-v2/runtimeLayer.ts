@@ -8,6 +8,9 @@ import * as OrchestrationEventStore from "../persistence/OrchestrationEventStore
 import * as McpAppModelContext from "../mcpApps/McpAppModelContext.ts";
 import * as MemoryPurge from "../fork/MemoryPurge.ts";
 import * as MemoryRetention from "../fork/MemoryRetention.ts";
+import * as CodeMapPurge from "../fork/CodeMapPurge.ts";
+import * as CodeMapService from "../fork/CodeMapService.ts";
+import * as CodeMapStore from "../fork/CodeMapStore.ts";
 import * as MemoryService from "../fork/MemoryService.ts";
 import * as MemoryStore from "../fork/MemoryStore.ts";
 import * as RouterService from "../fork/RouterService.ts";
@@ -381,11 +384,16 @@ export const layerProduction = Layer.mergeAll(
     Layer.provide(layerManagedProjectFoldersProvided),
   ),
   MemoryService.layerProduction,
+  CodeMapService.layerProduction,
   MemoryPurge.layer.pipe(
     Layer.provide(MemoryStore.layerProduction),
     Layer.provide(layerProjectService),
   ),
   MemoryRetention.layer.pipe(Layer.provide(MemoryStore.layerProduction)),
+  CodeMapPurge.layer.pipe(
+    Layer.provide(CodeMapStore.layerProduction),
+    Layer.provide(layerProjectService),
+  ),
   GuestShareService.layer.pipe(
     Layer.provide(Layer.merge(layerOrchestratorProvided, layerCommandOutputHubProvided)),
   ),
