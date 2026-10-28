@@ -71,10 +71,12 @@ describe("renderCodeMap", () => {
   it("shows a file's main symbols while they fit, and drops them before dropping files", () => {
     const withSymbols = [
       { path: "src/a.ts", language: "typescript", symbols: ["Alpha", "alphaHelper"] },
-      { path: "src/b.ts", language: "typescript", symbols: ["Beta"] },
+      { path: "src/b.ts", language: "typescript", symbols: ["Beta", "b"] },
+      { path: "src/.hidden", language: null },
     ];
+    // "b" repeats the file name, and the dotfile is counted but not named.
     expect(renderCodeMap({ files: withSymbols, budgetTokens: 1000 })).toContain(
-      "src/ (2): a.ts (Alpha, alphaHelper), b.ts (Beta)",
+      "src/ (3): a.ts (Alpha, alphaHelper), b.ts (Beta)",
     );
     const tight = renderCodeMap({ files: withSymbols, budgetTokens: 22 });
     expect(tight).not.toContain("Alpha");

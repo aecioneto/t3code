@@ -131,11 +131,17 @@ function groupByDirectory(files: ReadonlyArray<MapFile>, depth: number) {
     for (let level = 0; level <= Math.min(folder.length, depth); level += 1) {
       entry(folder.slice(0, level).join("/")).total += 1;
     }
-    if (folder.length <= depth) {
-      entry(folder.join("/")).files.push({ ...file, name: segments.at(-1) ?? file.path });
+    const name = segments.at(-1) ?? file.path;
+    // Dotfiles count toward the folder's total but are not worth a name in the outline.
+    if (folder.length <= depth && !name.startsWith(".")) {
+      entry(folder.join("/")).files.push({ ...file, name });
     }
   }
-  return [...directories.values()].toSorted((left, right) => left.path.localeCompare(right.path));
+  // Hidden folders such as .github come last so they do not crowd out the source folders.
+  const hidden = (path: string) => (path.split("/").some((part) => part.startsWith(".")) ? 1 : 0);
+  return [...directories.values()].toSorted(
+    (left, right) => hidden(left.path) - hidden(right.path) || left.path.localeCompare(right.path),
+  );
 }
 
 function renderLines(
@@ -150,10 +156,18 @@ function renderLines(
     const ordered = directory.files.toSorted((left, right) => {
       const focused = (name: string) =>
         focus.has(directory.path === "" ? name : `${directory.path}/${name}`) ? 0 : 1;
-      return focused(left.name) - focused(right.name) || left.name.localeCompare(right.name);
+      return (
+        focused(left.name) - focused(right.name) ||
+        (right.symbols?.length ?? 0) - (left.symbols?.length ?? 0) ||
+        left.name.localeCompare(right.name)
+      );
     });
     const shown = ordered.slice(0, perDirectory).map((file) => {
-      const symbols = (file.symbols ?? []).slice(0, perFile);
+      // A symbol named like its file adds nothing the file name does not already say.
+      const stem = file.name.replace(/\.[^.]*$/, "").toLowerCase();
+      const symbols = (file.symbols ?? [])
+        .filter((name) => name.toLowerCase() !== stem)
+        .slice(0, perFile);
       return symbols.length === 0 ? file.name : `${file.name} (${symbols.join(", ")})`;
     });
     const hidden = ordered.length - shown.length;
@@ -177,15 +191,21 @@ export function renderCodeMap(input: {
   const focus = new Set(input.focusPaths ?? []);
   const header = `Code map (${input.files.length} files; folder (files): file names)`;
   const budget = input.budgetTokens * CHARS_PER_TOKEN;
-  for (const depth of [5, 4, 3, 2, 1, 0]) {
-    for (const perDirectory of [12, 6, 3, 0]) {
-      for (const perFile of [4, 2, 0]) {
-        const text = [
-          header,
-          ...renderLines(input.files, depth, perDirectory, perFile, focus),
-        ].join("\n");
-        if (text.length <= budget) return text;
-      }
+  // Folders two or three levels down show where things live, and names show what is in them.
+  // Detail is trimmed before depth, and a folder line with no names is the last resort.
+  const tiers: ReadonlyArray<readonly [depth: number, perDirectory: number]> = [
+    ...[3, 2, 1].flatMap((depth) =>
+      [12, 6, 3].map((perDirectory) => [depth, perDirectory] as const),
+    ),
+    [1, 0],
+    [0, 0],
+  ];
+  for (const [depth, perDirectory] of tiers) {
+    for (const perFile of [4, 2, 0]) {
+      const text = [header, ...renderLines(input.files, depth, perDirectory, perFile, focus)].join(
+        "\n",
+      );
+      if (text.length <= budget) return text;
     }
   }
   return header;

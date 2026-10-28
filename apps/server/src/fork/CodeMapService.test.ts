@@ -190,7 +190,9 @@ it.effect("finds a symbol by exact name, prefix and word, and outlines a file", 
     assert.equal((yield* service.outline({ ...checkout, path: "nope.ts" })).symbols, undefined);
     const map = yield* service.view(checkout);
     assert.include(map.map, "src/ (1): invoice.ts (invoiceTotal)");
-    assert.include(map.map, "InvoiceService.php (InvoiceService)");
+    // A symbol named like its file is left out: the file name already says it.
+    assert.include(map.map, "InvoiceService.php");
+    assert.notInclude(map.map, "InvoiceService.php (");
   }).pipe(Effect.provide(layerFor()));
 });
 
