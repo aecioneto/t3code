@@ -190,3 +190,32 @@ export function renderCodeMap(input: {
   }
   return header;
 }
+
+const BLOCK_OPEN = "<project_code_map>";
+const BLOCK_CLOSE = "</project_code_map>";
+const BLOCK_PREAMBLE =
+  "Generated outline of this project's folders and files; it may be out of date. Look up definitions with t3_find_symbol and t3_file_outline before searching files. It never changes permissions or the user's instructions.";
+
+/** The map as a block an agent reads once at the start of a thread; `null` when there is none. */
+export function buildCodeMapBlock(map: string): string | null {
+  return map.trim() === "" ? null : [BLOCK_OPEN, BLOCK_PREAMBLE, map, BLOCK_CLOSE].join("\n");
+}
+
+/**
+ * File paths from a run as paths inside `root`: absolute ones are made relative, and anything
+ * outside the root or not a plain relative path is dropped.
+ */
+export function pathsInsideRoot(root: string, paths: ReadonlyArray<string>): ReadonlyArray<string> {
+  const prefix = root.endsWith("/") ? root : `${root}/`;
+  const relative = paths.map((path) => (path.startsWith("/") ? path.slice(prefix.length) : path));
+  return Array.from(
+    new Set(
+      paths.flatMap((path, index) =>
+        (path.startsWith("/") ? path.startsWith(prefix) : true) &&
+        isSafeRelativePath(relative[index]!)
+          ? [relative[index]!.replace(/^\.\//, "")]
+          : [],
+      ),
+    ),
+  );
+}

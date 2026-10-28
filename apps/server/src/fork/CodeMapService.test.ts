@@ -8,6 +8,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as TestClock from "effect/testing/TestClock";
 
 import * as ServerSettings from "../serverSettings.ts";
 import * as VcsProcess from "../vcs/VcsProcess.ts";
@@ -204,5 +205,27 @@ it.effect("re-reads unchanged files when the extractor version changes", () => {
     assert.match(stored![1], /^[0-9a-f]{64}:s\d+$/);
     const again = yield* service.rebuild(checkout);
     assert.equal(again.changed, 0);
+  }).pipe(Effect.provide(layerFor()));
+});
+
+it.effect("scans again in the background only once the map is hours old", () => {
+  const root = makeProject({ "src/a.ts": "a" });
+  return Effect.gen(function* () {
+    const service = yield* CodeMapService.CodeMapService;
+    const checkout = { projectId: "p1", rootPath: root };
+    yield* service.rebuild(checkout);
+    NodeFS.writeFileSync(NodePath.join(root, "src/b.ts"), "b");
+    yield* TestClock.adjust("1 hour");
+    yield* service.view(checkout);
+    yield* Effect.yieldNow;
+    // Still fresh: nothing scanned in the background, so this scan finds the new file.
+    assert.equal((yield* service.rebuild(checkout)).changed, 1);
+    NodeFS.writeFileSync(NodePath.join(root, "src/c.ts"), "c");
+    yield* TestClock.adjust("7 hours");
+    yield* service.view(checkout);
+    yield* Effect.yieldNow;
+    // The background scan holds the lock first, so by the time this runs nothing is left to change.
+    assert.equal((yield* service.rebuild(checkout)).changed, 0);
+    assert.include((yield* service.view(checkout)).map, "src/ (3)");
   }).pipe(Effect.provide(layerFor()));
 });

@@ -1,5 +1,6 @@
 import { renderCodeMap } from "@t3tools/memory/codemap";
 import * as Context from "effect/Context";
+import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
@@ -12,6 +13,8 @@ import * as CodeIndexer from "./CodeIndexer.ts";
 import * as CodeMapStore from "./CodeMapStore.ts";
 
 export const DEFAULT_MAP_BUDGET_TOKENS = 1500;
+// Commands the agent ran (checkouts, installs, generators) change files no run reports.
+const RESCAN_AFTER_MS = 6 * 60 * 60 * 1000;
 
 export class CodeMapRejectedError extends Schema.TaggedError<CodeMapRejectedError>()(
   "CodeMapRejectedError",
@@ -124,8 +127,8 @@ const make = Effect.gen(function* () {
       .pipe(Effect.ensuring(Effect.sync(() => building.delete(key))));
   };
 
-  // The first request for a checkout starts its scan in the background and reports `building`.
-  const startFirstScan = Effect.fn("CodeMapService.startFirstScan")(function* (root: RootInput) {
+  // Scans in the background; the first request for a checkout reports `building` meanwhile.
+  const startScan = Effect.fn("CodeMapService.startScan")(function* (root: RootInput) {
     if (building.has(rootKey(root))) return;
     yield* Effect.forkIn(
       scan(root).pipe(
@@ -135,6 +138,16 @@ const make = Effect.gen(function* () {
       ),
       scope,
     );
+  });
+
+  // A map that has not been looked at in hours is scanned again in the background.
+  const rescanIfStale = Effect.fn("CodeMapService.rescanIfStale")(function* (
+    root: RootInput,
+    indexedAt: string | null,
+  ) {
+    if (indexedAt === null || building.has(rootKey(root))) return;
+    const age = DateTime.toEpochMillis(yield* DateTime.now) - Date.parse(indexedAt);
+    if (age > RESCAN_AFTER_MS) yield* startScan(root);
   });
 
   const view = Effect.fn("CodeMapService.view")(function* (
@@ -151,9 +164,10 @@ const make = Effect.gen(function* () {
     const key = rootKey(input);
     const status = yield* store.status(input);
     if (status === undefined) {
-      yield* startFirstScan(input);
+      yield* startScan(input);
       return { map: "", building: true, indexedAt: null, files: 0 };
     }
+    yield* rescanIfStale(input, status.indexedAt);
     const all = yield* store.files(input);
     const prefix = directory === "" ? "" : `${directory}/`;
     const files = all
@@ -182,10 +196,12 @@ const make = Effect.gen(function* () {
     input: RootInput & { readonly name: string; readonly kind?: string; readonly limit: number },
   ) {
     yield* requireEnabled(input.projectId);
-    if ((yield* store.status(input)) === undefined) {
-      yield* startFirstScan(input);
+    const status = yield* store.status(input);
+    if (status === undefined) {
+      yield* startScan(input);
       return { symbols: [], building: true };
     }
+    yield* rescanIfStale(input, status.indexedAt);
     return {
       symbols: yield* store.findSymbols(input),
       building: building.has(rootKey(input)),
@@ -200,10 +216,12 @@ const make = Effect.gen(function* () {
     if (path === null || path === "") {
       return yield* new CodeMapRejectedError({ reason: "path_outside_project" });
     }
-    if ((yield* store.status(input)) === undefined) {
-      yield* startFirstScan(input);
+    const status = yield* store.status(input);
+    if (status === undefined) {
+      yield* startScan(input);
       return { symbols: undefined, building: true };
     }
+    yield* rescanIfStale(input, status.indexedAt);
     return {
       symbols: yield* store.outline({ ...input, path }),
       building: building.has(rootKey(input)),

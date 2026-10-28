@@ -110,6 +110,8 @@ import * as MemoryExtractionReactor from "./fork/MemoryExtractionReactor.ts";
 import * as MemoryExtractor from "./fork/MemoryExtractor.ts";
 import * as MemoryMirror from "./fork/MemoryMirror.ts";
 import * as MemorySeed from "./fork/MemorySeed.ts";
+import * as CodeIndexReactor from "./fork/CodeIndexReactor.ts";
+import * as CodeMapService from "./fork/CodeMapService.ts";
 import * as MemoryService from "./fork/MemoryService.ts";
 import * as MemoryStore from "./fork/MemoryStore.ts";
 import * as ModelClient from "./fork/ModelClient.ts";
@@ -637,6 +639,12 @@ const layerRuntimeCoreDependenciesBase = Layer.mergeAll(
     Layer.provide(MemoryService.layerProduction),
     Layer.provide(MemoryStore.layerProduction),
   ),
+  Layer.effectDiscard(
+    Effect.gen(function* () {
+      const service = yield* CodeIndexReactor.CodeIndexReactor;
+      yield* service.start();
+    }),
+  ).pipe(Layer.provide(CodeIndexReactor.layer), Layer.provide(CodeMapService.layerProduction)),
   ProviderUsageLimitsIngestion.layer,
   layerProviderInstallationRefresh,
   ReplayMarkers.layer,

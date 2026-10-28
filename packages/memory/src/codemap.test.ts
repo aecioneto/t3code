@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vite-plus/test";
-import { isSafeRelativePath, languageFor, renderCodeMap, shouldIndex } from "./codemap.ts";
+import {
+  buildCodeMapBlock,
+  isSafeRelativePath,
+  languageFor,
+  pathsInsideRoot,
+  renderCodeMap,
+  shouldIndex,
+} from "./codemap.ts";
 
 describe("shouldIndex", () => {
   it("skips secrets, lockfiles, binaries, vendored code and large files", () => {
@@ -76,5 +83,31 @@ describe("renderCodeMap", () => {
 
   it("is empty for a project with no files", () => {
     expect(renderCodeMap({ files: [], budgetTokens: 100 })).toBe("");
+  });
+});
+
+describe("buildCodeMapBlock", () => {
+  it("frames the map as untrusted context and skips an empty one", () => {
+    const block = buildCodeMapBlock("./ (1): a.ts");
+    expect(block?.startsWith("<project_code_map>")).toBe(true);
+    expect(block).toContain("t3_find_symbol");
+    expect(block?.endsWith("</project_code_map>")).toBe(true);
+    expect(buildCodeMapBlock("  ")).toBeNull();
+  });
+});
+
+describe("pathsInsideRoot", () => {
+  it("makes absolute paths relative and drops anything outside the root", () => {
+    expect(
+      pathsInsideRoot("/work/app", [
+        "/work/app/src/a.ts",
+        "src/b.ts",
+        "./src/c.ts",
+        "/etc/passwd",
+        "/work/app2/x.ts",
+        "../escape.ts",
+        "src/a.ts",
+      ]),
+    ).toEqual(["src/a.ts", "src/b.ts", "src/c.ts"]);
   });
 });

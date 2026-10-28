@@ -38,6 +38,9 @@ import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
 
 import * as MemoryInjection from "../fork/MemoryInjection.ts";
+import * as ProjectService from "../project/ProjectService.ts";
+import * as CodeMapInjection from "../fork/CodeMapInjection.ts";
+import * as CodeMapService from "../fork/CodeMapService.ts";
 import * as MemoryService from "../fork/MemoryService.ts";
 import * as McpSessionRegistry from "../mcp/McpSessionRegistry.ts";
 import * as McpAppModelContext from "../mcpApps/McpAppModelContext.ts";
@@ -612,6 +615,8 @@ export const layer: Layer.Layer<
     const mcpAppModelContext = yield* McpAppModelContext.McpAppModelContext;
     // Only the production server installs memory; runs without it get no project notes.
     const memory = yield* Effect.serviceOption(MemoryService.MemoryService);
+    const codeMap = yield* Effect.serviceOption(CodeMapService.CodeMapService);
+    const projectsForCodeMap = yield* Effect.serviceOption(ProjectService.ProjectService);
     const previewAgentActivity = yield* PreviewAgentActivity.PreviewAgentActivity;
     const turnItemPositions = yield* TurnItemPositionStore.TurnItemPositionStoreV2;
     const finalizationObserver = yield* RunFinalizationService.RunFinalizationObserver;
@@ -1637,10 +1642,19 @@ export const layer: Layer.Layer<
           prompt: input.message.text,
           providerTurnOrdinal: input.providerTurnOrdinal,
         });
+        const projectCodeMap = yield* CodeMapInjection.codeMapFor({
+          codeMap,
+          projects: projectsForCodeMap,
+          projectId: input.appThread.projectId,
+          worktreePath: input.appThread.worktreePath,
+          prompt: input.message.text,
+          providerTurnOrdinal: input.providerTurnOrdinal,
+        });
         const withNotes = MemoryInjection.withMemoryNotes({
           driver: input.session.driver,
           message: input.message,
-          notes: projectNotes,
+          notes:
+            [projectNotes, projectCodeMap].filter((part) => part !== null).join("\n\n") || null,
         });
         const turnContext = [...appContext, ...withNotes.appContext];
         const turnInput = {
