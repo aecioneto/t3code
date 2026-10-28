@@ -99,11 +99,14 @@ apps/server/src/
   orchestration-v2/ RunExecutionService.ts: RunExecutionService ...
 ```
 
-Rules:
+Rules (as built, tuned on real projects):
 
-- Directories first, then files ranked by importance: number of files in the same project that import or mention the file's exported names (a cheap text count over `code_symbols`, computed at index time into `code_files.rank`), plus a boost for files changed in the last 14 days and for `focusPaths`.
-- Per file: up to 6 exported symbol names. Cut files, then directories, until the budget (≈ 4 characters per token) fits.
+- One line per folder: `folder/ (files under it): file names`. Hidden folders come last; dotfiles are counted but not named.
+- Within a folder, files named in the prompt come first, then files with more symbols, then by name.
+- A file's main exported names follow it in parentheses, except a name equal to the file's own name.
+- The text is cut to fit the budget by giving up detail before depth: names per folder (12, 6, 3), then names per file (4, 2, 0), at depth 3, then 2, then 1; folder lines with no names are the last resort. Depth stays at 2 or more while names are shown, so folders like `app/models` remain visible in a large app.
 - Deterministic output for the same data, so provider prompt caches stay valid.
+- Not built: ranking files by how many other files mention their names. The symbol-count order has been enough on the projects measured.
 
 ## 6. MCP tools
 
