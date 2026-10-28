@@ -100,7 +100,10 @@ const make = Effect.gen(function* () {
     if (git !== undefined && git.exitCode === 0) {
       return git.stdout.split("\0").filter((entry) => entry.length > 0);
     }
-    return yield* Effect.tryPromise({ try: () => walk(rootPath), catch: (cause) => cause });
+    return yield* Effect.tryPromise({
+      try: () => walk(rootPath),
+      catch: (cause) => new CodeIndexError({ cause }),
+    });
   });
 
   // `null` when the file is gone, unreadable, not a regular file, or not worth mapping.
@@ -164,12 +167,13 @@ const make = Effect.gen(function* () {
     } satisfies CodeIndexResult;
   });
 
-  return CodeIndexer.of({
-    index: (input) =>
-      lock
-        .withPermits(1)(run(input))
-        .pipe(Effect.mapError((cause) => new CodeIndexError({ cause }))),
+  const index = Effect.fn("CodeIndexer.index")(function* (input: Parameters<typeof run>[0]) {
+    return yield* lock
+      .withPermits(1)(run(input))
+      .pipe(Effect.mapError((cause) => new CodeIndexError({ cause })));
   });
+
+  return CodeIndexer.of({ index });
 });
 
 export const layer = Layer.effect(CodeIndexer, make);

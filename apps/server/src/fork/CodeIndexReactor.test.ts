@@ -3,7 +3,6 @@ import { ProjectId, RunId, ThreadId } from "@t3tools/contracts";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import * as Option from "effect/Option";
 import * as Ref from "effect/Ref";
 import * as Stream from "effect/Stream";
 
@@ -59,7 +58,7 @@ const runWith = (input: {
               } as never),
           }),
           Layer.mock(ProjectService.ProjectService)({
-            getById: () => Effect.succeed(Option.some({ workspaceRoot: "/work/app" } as never)),
+            getById: () => Effect.succeedSome({ workspaceRoot: "/work/app" } as never),
           }),
           Layer.mock(CodeMapService.CodeMapService)({
             isEnabled: () =>

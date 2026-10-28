@@ -1,3 +1,5 @@
+// @effect-diagnostics effectFnOpportunity:off
+// The service methods only map the error type; the functions they wrap carry the spans.
 import {
   contentHash,
   rankFactor,
@@ -428,10 +430,9 @@ const make = Effect.gen(function* () {
     update: (id, patch) =>
       update(id, patch).pipe(
         Effect.mapError(storeError("update")),
-        Effect.flatMap((record) =>
-          record === undefined
-            ? Effect.fail(new MemoryNotFoundError({ id }))
-            : Effect.succeed(record),
+        Effect.filterOrFail(
+          (record) => record !== undefined,
+          () => new MemoryNotFoundError({ id }),
         ),
       ),
     forget: (id) =>

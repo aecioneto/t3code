@@ -16,7 +16,7 @@ export const PURGE_ARCHIVED_AFTER_DAYS = 90;
 export const sweepMemories = Effect.fn("MemoryRetention.sweep")(function* () {
   const store = yield* MemoryStore.MemoryStore;
   const nowMs = DateTime.toEpochMillis(yield* DateTime.now);
-  const before = (days: number) => new Date(nowMs - days * DAY_MS).toISOString();
+  const before = (days: number) => DateTime.formatIso(DateTime.makeUnsafe(nowMs - days * DAY_MS));
   const archived = yield* store.archiveStale({ untouchedSince: before(STALE_AFTER_DAYS) });
   const purged = yield* store.purgeArchived({ archivedBefore: before(PURGE_ARCHIVED_AFTER_DAYS) });
   return { archived, purged };

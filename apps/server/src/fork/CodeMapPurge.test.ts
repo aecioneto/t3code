@@ -1,7 +1,6 @@
 import { assert, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import * as Option from "effect/Option";
 
 import * as ProjectService from "../project/ProjectService.ts";
 import { purgeDeletedProjectCodeMaps } from "./CodeMapPurge.ts";
@@ -15,13 +14,11 @@ const layer = CodeMapStore.layer.pipe(
       // "unknown" has no row at all: it must keep its index.
       getById: (id) =>
         id === "unknown"
-          ? Effect.succeed(Option.none())
-          : Effect.succeed(
-              Option.some({
-                id,
-                deletedAt: id === "gone" ? "2026-01-02T00:00:00.000Z" : null,
-              } as never),
-            ),
+          ? Effect.succeedNone
+          : Effect.succeedSome({
+              id,
+              deletedAt: id === "gone" ? "2026-01-02T00:00:00.000Z" : null,
+            } as never),
     }),
   ),
 );

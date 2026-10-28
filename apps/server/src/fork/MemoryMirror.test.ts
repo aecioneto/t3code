@@ -8,7 +8,6 @@ import { assert, it } from "@effect/vitest";
 import { ProjectId } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import * as Option from "effect/Option";
 
 import * as ProjectService from "../project/ProjectService.ts";
 import * as ServerSettings from "../serverSettings.ts";
@@ -27,7 +26,7 @@ const layerFor = (root: string, enabled = true) =>
     Layer.provide(
       Layer.mergeAll(
         Layer.mock(ProjectService.ProjectService)({
-          getById: () => Effect.succeed(Option.some({ workspaceRoot: root } as never)),
+          getById: () => Effect.succeedSome({ workspaceRoot: root } as never),
         }),
         ServerSettings.layerTest({ memoryEnabledProjectIds: enabled ? ["p1"] : [] }).pipe(
           Layer.orDie,

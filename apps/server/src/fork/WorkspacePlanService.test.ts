@@ -2,7 +2,6 @@ import { assert, it } from "@effect/vitest";
 import { ProjectId } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import * as Option from "effect/Option";
 
 import * as ProjectService from "../project/ProjectService.ts";
 import * as GitVcsDriver from "../vcs/GitVcsDriver.ts";
@@ -24,7 +23,7 @@ const layerFor = (input: {
     Layer.provide(
       Layer.mergeAll(
         Layer.mock(ProjectService.ProjectService)({
-          getById: () => Effect.succeed(Option.some({ workspaceRoot: "/repo" } as never)),
+          getById: () => Effect.succeedSome({ workspaceRoot: "/repo" } as never),
         }),
         Layer.mock(WorkspaceEntries.WorkspaceEntries)({
           searchContents: () =>

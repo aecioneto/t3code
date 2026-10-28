@@ -1,3 +1,5 @@
+// @effect-diagnostics effectFnOpportunity:off
+// The service methods only map the error type; the functions they wrap carry the spans.
 import type { MapFile } from "@t3tools/memory/codemap";
 import type { CodeSymbol } from "@t3tools/memory/symbols";
 import * as Context from "effect/Context";

@@ -1,7 +1,6 @@
 import { assert, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import * as Option from "effect/Option";
 
 import * as ProjectService from "../project/ProjectService.ts";
 import * as ForkDatabase from "./ForkDatabase.ts";
@@ -17,8 +16,8 @@ const layer = MemoryStore.layer.pipe(
       // "unknown" has no row at all: it must keep its notes.
       getById: (id) =>
         id === "unknown"
-          ? Effect.succeed(Option.none())
-          : Effect.succeed(Option.some({ id, deletedAt: deletedAt(id) } as never)),
+          ? Effect.succeedNone
+          : Effect.succeedSome({ id, deletedAt: deletedAt(id) } as never),
     }),
   ),
 );

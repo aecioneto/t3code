@@ -18,7 +18,7 @@ const codeMap = Option.some({
 } as unknown as CodeMapService.CodeMapService["Service"]);
 
 const projects = Option.some({
-  getById: () => Effect.succeed(Option.some({ workspaceRoot: "/work/app" })),
+  getById: () => Effect.succeedSome({ workspaceRoot: "/work/app" }),
 } as unknown as ProjectService.ProjectService["Service"]);
 
 const base = {

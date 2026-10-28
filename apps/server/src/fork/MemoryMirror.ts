@@ -1,3 +1,5 @@
+// @effect-diagnostics effectFnOpportunity:off
+// The service methods only map the error type; the functions they wrap carry the spans.
 import type { ProjectId } from "@t3tools/contracts";
 import { applyMirror, renderMirror } from "@t3tools/memory/mirror";
 import * as Context from "effect/Context";

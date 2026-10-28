@@ -8,7 +8,6 @@ import { expect, it } from "@effect/vitest";
 import { EnvironmentId, ProjectId, ProviderInstanceId, ThreadId } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import * as Option from "effect/Option";
 import * as Stream from "effect/Stream";
 
 import * as CodeIndexer from "../../../fork/CodeIndexer.ts";
@@ -58,7 +57,7 @@ const layerFor = (projectId: ProjectId, workspaceRoot: string, worktreePath: str
         Effect.succeed({ ...liveThreadShell(threadId), projectId, worktreePath }),
     }),
     Layer.mock(ProjectService.ProjectService)({
-      getById: () => Effect.succeed(Option.some({ workspaceRoot } as never)),
+      getById: () => Effect.succeedSome({ workspaceRoot } as never),
     }),
   );
 
