@@ -37,6 +37,12 @@ folder, so the files the agent wrote stay until you delete them. Branch, worktre
 these folders are not Git repositories. This is unavailable when the data
 directory itself sits inside a Git checkout.
 
+To give a thread without a project a project later, click **No project** in the
+thread header or choose **Move thread to a project...** in the command palette.
+The thread keeps its messages and continues in the project's folder; files it
+wrote in its own folder stay there. Only threads without a project can move, and
+not while a run is active.
+
 ### Start in the background
 
 In a desktop browser or the desktop app, press `Cmd+Enter` on macOS or `Ctrl+Enter`

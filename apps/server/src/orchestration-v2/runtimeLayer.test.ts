@@ -4006,6 +4006,79 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
     }),
   );
 
+  it.effect("moves a thread to another project unless a run is active or the project changed", () =>
+    Effect.gen(function* () {
+      const orchestrator = yield* Orchestrator.OrchestratorV2;
+      const fromProject = ProjectId.make("runtime-layer-move-from");
+      const toProject = ProjectId.make("runtime-layer-move-to");
+      const createdAt = "2026-10-28T12:00:00.000Z";
+      yield* seedProject({
+        projectId: toProject,
+        title: "Target",
+        workspaceRoot: "/tmp/runtime-layer-move-to",
+        defaultModelSelection: null,
+        createdAt,
+      });
+      const create = (name: string) =>
+        orchestrator.dispatch({
+          type: "thread.create",
+          createdBy: "user",
+          creationSource: "web",
+          commandId: CommandId.make(`runtime-layer-move-create-${name}`),
+          threadId: ThreadId.make(`runtime-layer-move-${name}`),
+          projectId: fromProject,
+          title: name,
+          modelSelection,
+          runtimeMode: "full-access",
+          interactionMode: "default",
+          branch: null,
+          worktreePath: "/tmp/runtime-layer-move-scratch",
+        });
+      const move = (name: string, overrides: { readonly expectedProjectId?: ProjectId } = {}) =>
+        orchestrator.dispatch({
+          type: "thread.metadata.update",
+          commandId: CommandId.make(`runtime-layer-move-${name}`),
+          threadId: ThreadId.make(`runtime-layer-move-${name}`),
+          projectId: toProject,
+          worktreePath: null,
+          ...overrides,
+        });
+
+      yield* create("idle");
+      yield* move("idle", { expectedProjectId: fromProject });
+      const moved = yield* orchestrator.getThreadProjection(
+        ThreadId.make("runtime-layer-move-idle"),
+      );
+      assert.equal(moved.thread.projectId, toProject);
+      assert.isNull(moved.thread.worktreePath);
+
+      yield* create("stale");
+      const stale = yield* move("stale", { expectedProjectId: toProject }).pipe(Effect.flip);
+      assert.instanceOf(stale, Orchestrator.OrchestratorDispatchError);
+
+      yield* create("busy");
+      yield* orchestrator.dispatch({
+        type: "message.dispatch",
+        createdBy: "user",
+        creationSource: "web",
+        commandId: CommandId.make("runtime-layer-move-busy-message"),
+        threadId: ThreadId.make("runtime-layer-move-busy"),
+        messageId: MessageId.make("runtime-layer-move-busy-message"),
+        text: "Keep this run active.",
+        attachments: [],
+        modelSelection,
+        dispatchMode: { type: "start_immediately" },
+      });
+      const busy = yield* move("busy").pipe(Effect.flip);
+      assert.instanceOf(busy, Orchestrator.OrchestratorDispatchError);
+      assert.equal(
+        (yield* orchestrator.getThreadProjection(ThreadId.make("runtime-layer-move-busy"))).thread
+          .projectId,
+        fromProject,
+      );
+    }),
+  );
+
   it.effect("settles a thread its own agent settled once the turn completes", () =>
     Effect.gen(function* () {
       const orchestrator = yield* Orchestrator.OrchestratorV2;

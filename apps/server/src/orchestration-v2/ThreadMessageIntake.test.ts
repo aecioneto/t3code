@@ -10,6 +10,7 @@ import {
   EventId,
   GuestMessageId,
   MessageId,
+  ProjectId,
   RuntimeRequestId,
   ThreadId,
   TurnItemId,
@@ -27,6 +28,7 @@ import {
   resolveAttachmentPath,
 } from "../attachmentStore.ts";
 import * as ServerConfig from "../config.ts";
+import { ManagedProjectFolders } from "../project/ManagedProjectFolders.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import {
   OrchestratorCommandPreviouslyRejectedError,
@@ -40,7 +42,16 @@ const layerIntakeTest = ServerConfig.layerTest(process.cwd(), {
 }).pipe(
   Layer.provideMerge(DocumentText.layer.pipe(Layer.provideMerge(NodeServices.layer))),
   Layer.provideMerge(ServerSettings.layerTest()),
+  Layer.provideMerge(
+    Layer.mock(ManagedProjectFolders)({
+      namedProjectsRoot: "",
+      isScratchProject: (projectId) => Effect.succeed(projectId === SCRATCH_PROJECT),
+    }),
+  ),
 );
+
+const SCRATCH_PROJECT = ProjectId.make("project-scratch");
+const REAL_PROJECT = ProjectId.make("project-real");
 
 const layerFailingDispatchHandler =
   (captured: OrchestrationV2ServerCommand[]) => (command: OrchestrationV2ServerCommand) => {
@@ -424,5 +435,74 @@ it.effect("sends a guest message with the guest's files, never ones the client n
     expect(command.attachments).toHaveLength(1);
     // The guest's file, which is already the thread's.
     expect(command.attachments).toEqual([guestFile]);
+  }).pipe(Effect.provide(layerIntakeTest)),
+);
+
+const moveCommand = (projectId: ProjectId): OrchestrationV2Command => ({
+  type: "thread.metadata.update",
+  commandId: CommandId.make("move-thread"),
+  threadId: ThreadId.make("thread-move"),
+  projectId,
+});
+
+const layerThreadIn = (
+  captured: OrchestrationV2ServerCommand[],
+  shell: { readonly projectId: ProjectId; readonly worktreePath: string | null },
+) =>
+  Layer.mock(ThreadManagementService.ThreadManagementService)({
+    dispatch: layerFailingDispatchHandler(captured),
+    getThreadShell: () =>
+      Effect.succeed(
+        shell as unknown as Effect.Success<
+          ReturnType<ThreadManagementService.ThreadManagementServiceShape["getThreadShell"]>
+        >,
+      ),
+  });
+
+it.effect("moves a Scratch thread to a project and leaves its Scratch folder behind", () =>
+  Effect.gen(function* () {
+    const captured: OrchestrationV2ServerCommand[] = [];
+    yield* dispatchCommand(moveCommand(REAL_PROJECT)).pipe(
+      Effect.provide(
+        layerThreadIn(captured, { projectId: SCRATCH_PROJECT, worktreePath: "/scratch/thread" }),
+      ),
+      Effect.result,
+    );
+    expect(captured).toMatchObject([
+      {
+        type: "thread.metadata.update",
+        projectId: REAL_PROJECT,
+        expectedProjectId: SCRATCH_PROJECT,
+        expectedWorktreePath: "/scratch/thread",
+        worktreePath: null,
+        branch: null,
+      },
+    ]);
+  }).pipe(Effect.provide(layerIntakeTest)),
+);
+
+it.effect("refuses to move a thread that already belongs to a project", () =>
+  Effect.gen(function* () {
+    const captured: OrchestrationV2ServerCommand[] = [];
+    const result = yield* dispatchCommand(moveCommand(ProjectId.make("project-other"))).pipe(
+      Effect.provide(
+        layerThreadIn(captured, { projectId: REAL_PROJECT, worktreePath: "/repo/worktree" }),
+      ),
+      Effect.result,
+    );
+    expect(result._tag).toBe("Failure");
+    expect(captured).toEqual([]);
+  }).pipe(Effect.provide(layerIntakeTest)),
+);
+
+it.effect("refuses to move a thread into Scratch", () =>
+  Effect.gen(function* () {
+    const captured: OrchestrationV2ServerCommand[] = [];
+    const result = yield* dispatchCommand(moveCommand(SCRATCH_PROJECT)).pipe(
+      Effect.provide(layerThreadIn(captured, { projectId: REAL_PROJECT, worktreePath: null })),
+      Effect.result,
+    );
+    expect(result._tag).toBe("Failure");
+    expect(captured).toEqual([]);
   }).pipe(Effect.provide(layerIntakeTest)),
 );

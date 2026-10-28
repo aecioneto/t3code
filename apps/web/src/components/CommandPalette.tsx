@@ -59,6 +59,7 @@ import {
   FileSearchIcon,
   FolderGit2Icon,
   FolderIcon,
+  FolderInputIcon,
   FolderPlusIcon,
   MessageSquareDashedIcon,
   LinkIcon,
@@ -192,6 +193,7 @@ import {
   useSortedProjectGroups,
 } from "./CommandPaletteLookups";
 import {
+  buildMoveThreadToProjectItems,
   buildNewThreadInProjectItems,
   buildProjectSearchItems,
 } from "./CommandPaletteProjectItems";
@@ -234,6 +236,7 @@ import { threadRecentUse } from "@t3tools/shared/paletteSearch";
 const EMPTY_BROWSE_ENTRIES: FilesystemBrowseResult["entries"] = [];
 const ADD_PROJECT_ENTRY_GROUP = "add-project";
 const NEW_THREAD_IN_GROUP = "projects";
+const MOVE_THREAD_GROUP = "move-thread";
 
 /** The submenu an open intent starts in; its groups resolve while rendering. */
 function openIntentView(intent: CommandPaletteOpenIntent | null): CommandPaletteView | null {
@@ -247,6 +250,11 @@ function openIntentView(intent: CommandPaletteOpenIntent | null): CommandPalette
       return {
         addonIcon: <SquarePenIcon className={ADDON_ICON_CLASS} />,
         groups: [{ value: NEW_THREAD_IN_GROUP, label: "Projects", items: [] }],
+      };
+    case "move-thread":
+      return {
+        addonIcon: <FolderInputIcon className={ADDON_ICON_CLASS} />,
+        groups: [{ value: MOVE_THREAD_GROUP, label: "Move to project", items: [] }],
       };
     case "change-theme":
       return {
@@ -410,6 +418,9 @@ function OpenCommandPaletteDialog(props: {
   const stopThreadSession = useAtomCommand(threadEnvironment.stopSession, {
     reportFailure: false,
   });
+  const updateThreadMetadata = useAtomCommand(threadEnvironment.updateMetadata, {
+    reportFailure: false,
+  });
   const refreshProviders = useAtomCommand(serverEnvironment.refreshProviders, {
     reportFailure: false,
   });
@@ -434,6 +445,10 @@ function OpenCommandPaletteDialog(props: {
   const openPanelPullRequestUrl = useOpenPanelPullRequestUrl(referenceThreadRef);
   const activeThreadServerConfig = useServerConfigs().get(
     activeThread?.environmentId ?? ("" as EnvironmentId),
+  );
+  const canOperateActiveThread = useEnvironmentScope(
+    activeThread?.environmentId ?? ("" as EnvironmentId),
+    AuthOrchestrationOperateScope,
   );
   const canShareActiveThreadWithGuest = useAtomValue(
     canShareWithGuestAtom(activeThread?.environmentId ?? ("" as EnvironmentId)),
@@ -752,6 +767,37 @@ function OpenCommandPaletteDialog(props: {
     locationByEnvironmentId: projectEnvironmentLocationById,
     runProject: openProjectFromSearch,
   });
+
+  const activeThreadIsScratch =
+    activeThread !== null &&
+    projects.some(
+      (project) =>
+        project.environmentId === activeThread.environmentId &&
+        project.id === activeThread.projectId &&
+        isScratchProject(project, scratchWorkspaceRootFor(project.environmentId)),
+    );
+  const canMoveActiveThread =
+    activeThread !== null && activeThreadIsScratch && canOperateActiveThread;
+  const moveThreadItems = (() => {
+    if (activeThread === null || !canMoveActiveThread) return [];
+    return buildMoveThreadToProjectItems({
+      projects: projects
+        .filter(
+          (project) =>
+            project.environmentId === activeThread.environmentId &&
+            !isScratchProject(project, scratchWorkspaceRootFor(project.environmentId)),
+        )
+        .map((project) => ({ ...project, displayName: project.title })),
+      locationByEnvironmentId: projectEnvironmentLocationById,
+      runProject: async (project) => {
+        const moved = await updateThreadMetadata({
+          environmentId: activeThread.environmentId,
+          input: { threadId: activeThread.id, projectId: project.id },
+        });
+        if (moved._tag === "Failure") throw squashAtomCommandFailure(moved);
+      },
+    });
+  })();
 
   const projectThreadItems = (() => {
     const isScratch = (project: CommandPaletteProject) =>
@@ -1309,6 +1355,18 @@ function OpenCommandPaletteDialog(props: {
     }
   }
 
+  if (canMoveActiveThread) {
+    actionItems.push({
+      kind: "submenu",
+      value: "action:move-thread-to-project",
+      searchTerms: ["move", "project", "assign", "no project", "scratch", "choose"],
+      title: "Move thread to a project...",
+      icon: <FolderInputIcon className={ITEM_ICON_CLASS} />,
+      addonIcon: <FolderInputIcon className={ADDON_ICON_CLASS} />,
+      groups: [{ value: MOVE_THREAD_GROUP, label: "Move to project", items: moveThreadItems }],
+    });
+  }
+
   if (activeThread !== null && canShareActiveThreadWithGuest) {
     const threadRef = scopeThreadRef(activeThread.environmentId, activeThread.id);
     actionItems.push({
@@ -1578,11 +1636,13 @@ function OpenCommandPaletteDialog(props: {
         ? addProjectEntryGroups()
         : currentView?.groups[0]?.value === NEW_THREAD_IN_GROUP
           ? [{ value: NEW_THREAD_IN_GROUP, label: "Projects", items: projectThreadItems }]
-          : currentView?.groups[0]?.value === "themes"
-            ? changeThemeItem.groups
-            : currentView?.groups[0]?.value === "appearance"
-              ? changeAppearanceItem.groups
-              : (currentView?.groups ?? rootGroups);
+          : currentView?.groups[0]?.value === MOVE_THREAD_GROUP
+            ? [{ value: MOVE_THREAD_GROUP, label: "Move to project", items: moveThreadItems }]
+            : currentView?.groups[0]?.value === "themes"
+              ? changeThemeItem.groups
+              : currentView?.groups[0]?.value === "appearance"
+                ? changeAppearanceItem.groups
+                : (currentView?.groups ?? rootGroups);
 
   const isLinkedThreadSearch =
     linkedThreadSearch?.linkedThreads !== undefined && deferredQuery === linkedThreadSearch.query;

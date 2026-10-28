@@ -93,6 +93,26 @@ export function buildNewThreadInProjectItems(input: ProjectItemsInput) {
   });
 }
 
+/** Projects in the thread's own environment, as targets of "Move to project...". */
+export function buildMoveThreadToProjectItems(input: {
+  readonly projects: ReadonlyArray<CommandPaletteProject>;
+  readonly locationByEnvironmentId: ReadonlyMap<EnvironmentId, CommandPaletteProjectLocation>;
+  readonly runProject: (project: CommandPaletteProject) => Promise<void>;
+}) {
+  return buildProjectActionItems({
+    projects: input.projects,
+    valuePrefix: "move-thread-to",
+    renderDescription: (project) => (
+      <ProjectLocationDescription
+        location={input.locationByEnvironmentId.get(project.environmentId)}
+        workspaceRoot={project.workspaceRoot}
+      />
+    ),
+    icon: projectFaviconIcon,
+    runProject: input.runProject,
+  });
+}
+
 function ProjectLocationDescription(props: {
   readonly location: CommandPaletteProjectLocation | undefined;
   readonly workspaceRoot: string;

@@ -21,12 +21,11 @@ export const codeMapFor = Effect.fn("CodeMapInjection.codeMapFor")(function* (in
   if (!(yield* codeMap.isEnabled(input.projectId))) return null;
   const rootPath =
     input.worktreePath ??
-    (yield* input.projects.value
-      .getById(input.projectId)
-      .pipe(
-        Effect.map(Option.map((project) => project.workspaceRoot)),
-        Effect.map(Option.getOrNull),
-      ));
+    (yield* input.projects.value.getById(input.projectId).pipe(
+      Effect.map(Option.map((project) => project.workspaceRoot)),
+      Effect.map(Option.getOrNull),
+      Effect.orElseSucceed(() => null),
+    ));
   if (rootPath === null) return null;
   const view = yield* codeMap
     .view({

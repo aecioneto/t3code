@@ -1,10 +1,11 @@
 import { remapComposerContextAttachments } from "@t3tools/shared/composerContextReferences";
 import { appendUserInputAttachmentPaths } from "../provider/userInputAttachments.ts";
-import type { ChatAttachment, OrchestrationV2Command } from "@t3tools/contracts";
+import type { ChatAttachment, OrchestrationV2Command, ProjectId } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import { resolveAttachmentPath } from "../attachmentStore.ts";
 import * as ServerConfig from "../config.ts";
+import * as ManagedProjectFolders from "../project/ManagedProjectFolders.ts";
 import * as Orchestrator from "./Orchestrator.ts";
 
 import * as AttachmentClaims from "./AttachmentClaims.ts";
@@ -81,11 +82,47 @@ const withGuestAttachments = Effect.fn("ThreadMessageIntake.withGuestAttachments
   return { ...command, attachments: message?.attachments ?? [] };
 });
 
+/**
+ * Only a Scratch thread moves to a project: a project's thread owns its worktree, branch and
+ * checkpoints. The thread's own Scratch folder stays where it is.
+ */
+const withScratchMove = Effect.fn("ThreadMessageIntake.withScratchMove")(function* (
+  command: Extract<OrchestrationV2Command, { readonly type: "thread.metadata.update" }>,
+  projectId: ProjectId,
+) {
+  const threads = yield* ThreadManagement.ThreadManagementService;
+  const folders = yield* ManagedProjectFolders.ManagedProjectFolders;
+  const reject = (cause: string) =>
+    new Orchestrator.OrchestratorDispatchError({
+      commandId: command.commandId,
+      commandType: command.type,
+      cause,
+    });
+  const shell = yield* threads.getThreadShell(command.threadId);
+  if (shell === null) return yield* reject("Thread not found.");
+  if (shell.projectId === projectId) return command;
+  if (!(yield* folders.isScratchProject(shell.projectId))) {
+    return yield* reject("Only a thread with no project can be moved to a project.");
+  }
+  if (yield* folders.isScratchProject(projectId)) return yield* reject("Choose a project.");
+  return {
+    ...command,
+    expectedProjectId: shell.projectId,
+    expectedWorktreePath: shell.worktreePath,
+    worktreePath: null,
+    branch: null,
+  };
+});
+
 export const dispatchCommand = Effect.fn("ThreadMessageIntake.dispatchCommand")(function* (
   incoming: OrchestrationV2Command,
 ) {
   const command =
-    incoming.type === "message.dispatch" ? yield* withGuestAttachments(incoming) : incoming;
+    incoming.type === "message.dispatch"
+      ? yield* withGuestAttachments(incoming)
+      : incoming.type === "thread.metadata.update" && incoming.projectId !== undefined
+        ? yield* withScratchMove(incoming, incoming.projectId)
+        : incoming;
   const threads = yield* ThreadManagement.ThreadManagementService;
   if (command.type === "runtime-request.respond" && command.attachmentsByQuestionId) {
     const config = yield* ServerConfig.ServerConfig;
