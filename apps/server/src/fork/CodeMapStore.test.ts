@@ -14,6 +14,7 @@ const file = (path: string, contentHash: string) => ({
   language: "typescript",
   contentHash,
   size: 10,
+  symbols: [],
 });
 
 it.effect("stores a scan, then applies only what changed", () =>
@@ -35,7 +36,9 @@ it.effect("stores a scan, then applies only what changed", () =>
     yield* store.apply({ ...root, upserts: [file("a.ts", "h3")], deletes: ["b.ts"] });
     assert.deepEqual([...(yield* store.hashes(root))], [["a.ts", "h3"]]);
     assert.equal((yield* store.status(root))?.files, 1);
-    assert.deepEqual(yield* store.files(root), [{ path: "a.ts", language: "typescript" }]);
+    assert.deepEqual(yield* store.files(root), [
+      { path: "a.ts", language: "typescript", symbols: [] },
+    ]);
   }).pipe(Effect.provide(layer)),
 );
 

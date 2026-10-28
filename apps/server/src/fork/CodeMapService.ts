@@ -6,6 +6,7 @@ import * as Schema from "effect/Schema";
 import * as Scope from "effect/Scope";
 
 import * as ServerSettings from "../serverSettings.ts";
+import type { CodeSymbol } from "@t3tools/memory/symbols";
 import * as VcsProcess from "../vcs/VcsProcess.ts";
 import * as CodeIndexer from "./CodeIndexer.ts";
 import * as CodeMapStore from "./CodeMapStore.ts";
@@ -56,6 +57,19 @@ export class CodeMapService extends Context.Service<
         readonly focusPaths?: ReadonlyArray<string>;
       },
     ) => Effect.Effect<CodeMapView, CodeMapServiceError>;
+    readonly findSymbol: (
+      input: RootInput & { readonly name: string; readonly kind?: string; readonly limit: number },
+    ) => Effect.Effect<
+      { readonly symbols: ReadonlyArray<CodeMapStore.FoundSymbol>; readonly building: boolean },
+      CodeMapServiceError
+    >;
+    /** The symbols of one file, or `undefined` when the index does not hold that file. */
+    readonly outline: (
+      input: RootInput & { readonly path: string },
+    ) => Effect.Effect<
+      { readonly symbols: ReadonlyArray<CodeSymbol> | undefined; readonly building: boolean },
+      CodeMapServiceError
+    >;
     /** Scans the checkout now and waits; the user's Rebuild action and tests use this. */
     readonly rebuild: (
       input: RootInput,
@@ -110,6 +124,19 @@ const make = Effect.gen(function* () {
       .pipe(Effect.ensuring(Effect.sync(() => building.delete(key))));
   };
 
+  // The first request for a checkout starts its scan in the background and reports `building`.
+  const startFirstScan = Effect.fn("CodeMapService.startFirstScan")(function* (root: RootInput) {
+    if (building.has(rootKey(root))) return;
+    yield* Effect.forkIn(
+      scan(root).pipe(
+        Effect.catch((error) =>
+          Effect.logWarning("Code map scan failed.", { projectId: root.projectId, error }),
+        ),
+      ),
+      scope,
+    );
+  });
+
   const view = Effect.fn("CodeMapService.view")(function* (
     input: RootInput & {
       readonly directory?: string;
@@ -123,15 +150,8 @@ const make = Effect.gen(function* () {
       return yield* new CodeMapRejectedError({ reason: "path_outside_project" });
     const key = rootKey(input);
     const status = yield* store.status(input);
-    if (status === undefined && !building.has(key)) {
-      yield* Effect.forkIn(
-        scan(input).pipe(
-          Effect.catch((error) =>
-            Effect.logWarning("Code map scan failed.", { projectId: input.projectId, error }),
-          ),
-        ),
-        scope,
-      );
+    if (status === undefined) {
+      yield* startFirstScan(input);
       return { map: "", building: true, indexedAt: null, files: 0 };
     }
     const all = yield* store.files(input);
@@ -158,6 +178,38 @@ const make = Effect.gen(function* () {
     };
   });
 
+  const findSymbol = Effect.fn("CodeMapService.findSymbol")(function* (
+    input: RootInput & { readonly name: string; readonly kind?: string; readonly limit: number },
+  ) {
+    yield* requireEnabled(input.projectId);
+    if ((yield* store.status(input)) === undefined) {
+      yield* startFirstScan(input);
+      return { symbols: [], building: true };
+    }
+    return {
+      symbols: yield* store.findSymbols(input),
+      building: building.has(rootKey(input)),
+    };
+  });
+
+  const outline = Effect.fn("CodeMapService.outline")(function* (
+    input: RootInput & { readonly path: string },
+  ) {
+    yield* requireEnabled(input.projectId);
+    const path = normalizeDirectory(input.path);
+    if (path === null || path === "") {
+      return yield* new CodeMapRejectedError({ reason: "path_outside_project" });
+    }
+    if ((yield* store.status(input)) === undefined) {
+      yield* startFirstScan(input);
+      return { symbols: undefined, building: true };
+    }
+    return {
+      symbols: yield* store.outline({ ...input, path }),
+      building: building.has(rootKey(input)),
+    };
+  });
+
   const rebuild = Effect.fn("CodeMapService.rebuild")(function* (input: RootInput) {
     yield* requireEnabled(input.projectId);
     return yield* scan(input);
@@ -181,7 +233,7 @@ const make = Effect.gen(function* () {
     };
   });
 
-  return CodeMapService.of({ isEnabled, view, rebuild, refresh, status });
+  return CodeMapService.of({ isEnabled, view, findSymbol, outline, rebuild, refresh, status });
 });
 
 export const layer = Layer.effect(CodeMapService, make);

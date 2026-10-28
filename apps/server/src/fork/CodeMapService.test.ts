@@ -138,3 +138,71 @@ it.effect("refuses when the map is off or the folder leaves the project", () => 
     ),
   );
 });
+
+it.effect("finds a symbol by exact name, prefix and word, and outlines a file", () => {
+  const root = makeProject({
+    "app/Services/InvoiceService.php": [
+      "<?php",
+      "class InvoiceService",
+      "{",
+      "    public function total() {}",
+      "    private function roundUp() {}",
+      "}",
+    ].join("\n"),
+    "src/invoice.ts": "export function invoiceTotal(items: number[]) {\n  return 1;\n}\n",
+    "routes/web.php": "<?php\nRoute::get('/invoices', [InvoiceController::class, 'index']);\n",
+  });
+  return Effect.gen(function* () {
+    const service = yield* CodeMapService.CodeMapService;
+    const checkout = { projectId: "p1", rootPath: root };
+    yield* service.rebuild(checkout);
+    const exact = yield* service.findSymbol({ ...checkout, name: "invoiceservice", limit: 5 });
+    // Other symbols of the same file follow, matched through the file's path.
+    assert.deepEqual(
+      [exact.symbols[0]?.name, exact.symbols[0]?.path, exact.symbols[0]?.line],
+      ["InvoiceService", "app/Services/InvoiceService.php", 2],
+    );
+    const prefix = yield* service.findSymbol({ ...checkout, name: "invoice", limit: 5 });
+    // Prefix matches are ordered by name length, shortest first.
+    assert.deepEqual(
+      prefix.symbols.map((symbol) => symbol.name),
+      ["invoiceTotal", "InvoiceService"],
+    );
+    const routes = yield* service.findSymbol({
+      ...checkout,
+      name: "invoices",
+      kind: "route",
+      limit: 5,
+    });
+    assert.deepEqual(
+      routes.symbols.map((symbol) => symbol.name),
+      ["GET /invoices"],
+    );
+    const outline = yield* service.outline({
+      ...checkout,
+      path: "app/Services/InvoiceService.php",
+    });
+    assert.deepEqual(
+      outline.symbols?.map((symbol) => `${symbol.parent ?? ""}.${symbol.name}:${symbol.line}`),
+      [".InvoiceService:2", "InvoiceService.total:4", "InvoiceService.roundUp:5"],
+    );
+    assert.equal((yield* service.outline({ ...checkout, path: "nope.ts" })).symbols, undefined);
+    const map = yield* service.view(checkout);
+    assert.include(map.map, "src/ (1): invoice.ts (invoiceTotal)");
+    assert.include(map.map, "InvoiceService.php (InvoiceService)");
+  }).pipe(Effect.provide(layerFor()));
+});
+
+it.effect("re-reads unchanged files when the extractor version changes", () => {
+  const root = makeProject({ "src/a.ts": "export function a() {}" });
+  return Effect.gen(function* () {
+    const store = yield* CodeMapStore.CodeMapStore;
+    const service = yield* CodeMapService.CodeMapService;
+    const checkout = { projectId: "p1", rootPath: root };
+    yield* service.rebuild(checkout);
+    const [stored] = [...(yield* store.hashes(checkout))];
+    assert.match(stored![1], /^[0-9a-f]{64}:s\d+$/);
+    const again = yield* service.rebuild(checkout);
+    assert.equal(again.changed, 0);
+  }).pipe(Effect.provide(layerFor()));
+});

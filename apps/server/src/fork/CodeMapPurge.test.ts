@@ -33,7 +33,7 @@ it.effect("purges the index of deleted projects only", () =>
       yield* store.apply({
         projectId,
         rootPath: `/work/${projectId}`,
-        upserts: [{ path: "a.ts", language: "typescript", contentHash: "h", size: 1 }],
+        upserts: [{ path: "a.ts", language: "typescript", contentHash: "h", size: 1, symbols: [] }],
         deletes: [],
       });
     }

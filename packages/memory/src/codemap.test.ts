@@ -61,6 +61,19 @@ describe("renderCodeMap", () => {
     expect(focused).toContain("apps/server/src/ (3): z.ts, a.ts, b.ts");
   });
 
+  it("shows a file's main symbols while they fit, and drops them before dropping files", () => {
+    const withSymbols = [
+      { path: "src/a.ts", language: "typescript", symbols: ["Alpha", "alphaHelper"] },
+      { path: "src/b.ts", language: "typescript", symbols: ["Beta"] },
+    ];
+    expect(renderCodeMap({ files: withSymbols, budgetTokens: 1000 })).toContain(
+      "src/ (2): a.ts (Alpha, alphaHelper), b.ts (Beta)",
+    );
+    const tight = renderCodeMap({ files: withSymbols, budgetTokens: 22 });
+    expect(tight).not.toContain("Alpha");
+    expect(tight.length).toBeLessThanOrEqual(22 * 4);
+  });
+
   it("is empty for a project with no files", () => {
     expect(renderCodeMap({ files: [], budgetTokens: 100 })).toBe("");
   });

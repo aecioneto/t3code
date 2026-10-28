@@ -9,6 +9,7 @@ import {
   MAX_INDEXED_FILES,
   shouldIndex,
 } from "@t3tools/memory/codemap";
+import { canExtractSymbols, extractSymbols } from "@t3tools/memory/symbols";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -19,6 +20,8 @@ import * as VcsProcess from "../vcs/VcsProcess.ts";
 import * as CodeMapStore from "./CodeMapStore.ts";
 
 const BATCH_SIZE = 200;
+// Stored with each hash so a better extractor re-reads files whose bytes did not change.
+const EXTRACTOR_VERSION = "s1";
 const WALK_SKIPPED = new Set([
   "node_modules",
   "vendor",
@@ -108,11 +111,15 @@ const make = Effect.gen(function* () {
         const info = await NodeFSP.lstat(absolute);
         if (!info.isFile() || !shouldIndex(relative, info.size)) return null;
         const bytes = await NodeFSP.readFile(absolute);
+        const language = languageFor(relative);
         return {
           path: relative,
-          language: languageFor(relative),
-          contentHash: NodeCrypto.createHash("sha256").update(bytes).digest("hex"),
+          language,
+          contentHash: `${NodeCrypto.createHash("sha256").update(bytes).digest("hex")}:${EXTRACTOR_VERSION}`,
           size: info.size,
+          symbols: canExtractSymbols(language)
+            ? extractSymbols(language, bytes.toString("utf8"))
+            : [],
         } satisfies CodeMapStore.IndexedFile;
       } catch {
         return null;

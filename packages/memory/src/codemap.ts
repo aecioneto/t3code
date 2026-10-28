@@ -103,6 +103,8 @@ export function isSafeRelativePath(path: string): boolean {
 export interface MapFile {
   readonly path: string;
   readonly language: string | null;
+  /** The file's main exported names, most important first. */
+  readonly symbols?: ReadonlyArray<string>;
 }
 
 const CHARS_PER_TOKEN = 4;
@@ -110,7 +112,7 @@ const CHARS_PER_TOKEN = 4;
 interface Directory {
   readonly path: string;
   total: number;
-  readonly files: Array<string>;
+  readonly files: Array<MapFile & { readonly name: string }>;
 }
 
 function groupByDirectory(files: ReadonlyArray<MapFile>, depth: number) {
@@ -129,7 +131,9 @@ function groupByDirectory(files: ReadonlyArray<MapFile>, depth: number) {
     for (let level = 0; level <= Math.min(folder.length, depth); level += 1) {
       entry(folder.slice(0, level).join("/")).total += 1;
     }
-    if (folder.length <= depth) entry(folder.join("/")).files.push(segments.at(-1) ?? file.path);
+    if (folder.length <= depth) {
+      entry(folder.join("/")).files.push({ ...file, name: segments.at(-1) ?? file.path });
+    }
   }
   return [...directories.values()].toSorted((left, right) => left.path.localeCompare(right.path));
 }
@@ -138,17 +142,21 @@ function renderLines(
   files: ReadonlyArray<MapFile>,
   depth: number,
   perDirectory: number,
+  perFile: number,
   focus: ReadonlySet<string>,
 ): ReadonlyArray<string> {
   return groupByDirectory(files, depth).map((directory) => {
     const label = directory.path === "" ? "./" : `${directory.path}/`;
-    const names = directory.files.toSorted((left, right) => {
+    const ordered = directory.files.toSorted((left, right) => {
       const focused = (name: string) =>
         focus.has(directory.path === "" ? name : `${directory.path}/${name}`) ? 0 : 1;
-      return focused(left) - focused(right) || left.localeCompare(right);
+      return focused(left.name) - focused(right.name) || left.name.localeCompare(right.name);
     });
-    const shown = names.slice(0, perDirectory);
-    const hidden = names.length - shown.length;
+    const shown = ordered.slice(0, perDirectory).map((file) => {
+      const symbols = (file.symbols ?? []).slice(0, perFile);
+      return symbols.length === 0 ? file.name : `${file.name} (${symbols.join(", ")})`;
+    });
+    const hidden = ordered.length - shown.length;
     const list =
       shown.length === 0 ? "" : `: ${shown.join(", ")}${hidden > 0 ? ` +${hidden}` : ""}`;
     return `${label} (${directory.total})${list}`;
@@ -171,8 +179,13 @@ export function renderCodeMap(input: {
   const budget = input.budgetTokens * CHARS_PER_TOKEN;
   for (const depth of [5, 4, 3, 2, 1, 0]) {
     for (const perDirectory of [12, 6, 3, 0]) {
-      const text = [header, ...renderLines(input.files, depth, perDirectory, focus)].join("\n");
-      if (text.length <= budget) return text;
+      for (const perFile of [4, 2, 0]) {
+        const text = [
+          header,
+          ...renderLines(input.files, depth, perDirectory, perFile, focus),
+        ].join("\n");
+        if (text.length <= budget) return text;
+      }
     }
   }
   return header;
