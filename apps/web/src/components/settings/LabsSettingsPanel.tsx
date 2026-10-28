@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
 import { useT3ConnectAuthPrompt } from "../clerk/useT3ConnectAuthPrompt";
 import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { ProjectMemorySettings } from "./ProjectMemorySettings";
 import { ProjectRouterSettings } from "./ProjectRouterSettings";
@@ -85,10 +86,38 @@ export function LabsSettingsPanel() {
             </Select>
           }
         />
+        <SettingsRow
+          serverScoped
+          settingKeys={["memoryKeepWords"]}
+          title="Words memory search keeps"
+          description="Memory search ignores common words like “the” or “de”. List words your notes use as real terms, separated by commas."
+          control={<MemoryKeepWordsInput />}
+        />
         <ProjectMemorySettings />
       </SettingsSection>
       <LegacyFeaturesSection />
     </SettingsPageContainer>
+  );
+}
+
+function MemoryKeepWordsInput() {
+  const settings = useScopedSettings();
+  const updateSettings = useUpdateScopedSettings();
+  const saved = settings.memoryKeepWords.join(", ");
+  return (
+    <Input
+      key={saved}
+      className="w-56"
+      defaultValue={saved}
+      aria-label="Words memory search keeps"
+      onBlur={(event) => {
+        const words = event.target.value
+          .split(",")
+          .map((word) => word.trim())
+          .filter((word) => word.length > 0);
+        if (words.join(", ") !== saved) updateSettings({ memoryKeepWords: words });
+      }}
+    />
   );
 }
 

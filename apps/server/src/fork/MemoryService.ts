@@ -102,6 +102,11 @@ const make = Effect.gen(function* () {
     return current?.memoryEnabledProjectIds.includes(projectId) === true;
   });
 
+  const keepWords = Effect.fn("MemoryService.keepWords")(function* () {
+    const current = yield* settings.getSettings.pipe(Effect.orElseSucceed(() => undefined));
+    return current?.memoryKeepWords ?? [];
+  });
+
   const requireEnabled = Effect.fn("MemoryService.requireEnabled")(function* (projectId: string) {
     if (!(yield* isEnabled(projectId)))
       return yield* new MemoryRejectedError({ reason: "disabled" });
@@ -138,7 +143,7 @@ const make = Effect.gen(function* () {
     isEnabled,
     recall: Effect.fn("MemoryService.recall")(function* (input) {
       yield* requireEnabled(input.projectId);
-      return yield* store.search(input);
+      return yield* store.search({ ...input, keepWords: yield* keepWords() });
     }),
     write: Effect.fn("MemoryService.write")(function* (input) {
       yield* requireEnabled(input.projectId);
@@ -179,6 +184,7 @@ const make = Effect.gen(function* () {
       const matches = yield* store.search({
         projectId: input.projectId,
         query: input.prompt,
+        keepWords: yield* keepWords(),
         limit: CONTEXT_MATCH_LIMIT,
       });
       const seen = new Set<number>();

@@ -1,5 +1,6 @@
 import {
   contentHash,
+  rankFactor,
   toFtsQuery,
   type MemoryKind,
   type MemoryOrigin,
@@ -124,6 +125,17 @@ export class MemoryStore extends Context.Service<
     readonly firstAutoCreatedAt: (
       projectId: string,
     ) => Effect.Effect<string | undefined, MemoryStoreError>;
+    /**
+     * Retires what nobody has used for a long time: automatic, unpinned notes that are not
+     * conventions, decisions or architecture move to `archived`, where the user can restore them.
+     */
+    readonly archiveStale: (input: {
+      readonly untouchedSince: string;
+    }) => Effect.Effect<number, MemoryStoreError>;
+    /** Deletes archived notes the user never wrote, once they have sat archived since `archivedBefore`. */
+    readonly purgeArchived: (input: {
+      readonly archivedBefore: string;
+    }) => Effect.Effect<number, MemoryStoreError>;
     /** Projects that own at least one memory. */
     readonly projectIds: () => Effect.Effect<ReadonlyArray<string>, MemoryStoreError>;
     readonly list: (input: {
@@ -138,6 +150,7 @@ export class MemoryStore extends Context.Service<
       readonly projectId: string | null;
       readonly query: string;
       readonly kinds?: ReadonlyArray<MemoryKind>;
+      readonly keepWords?: ReadonlyArray<string>;
       readonly limit: number;
     }) => Effect.Effect<ReadonlyArray<MemoryRecord>, MemoryStoreError>;
   }
@@ -298,6 +311,34 @@ const make = Effect.gen(function* () {
     return rows[0]?.first ?? undefined;
   });
 
+  const archiveStale = Effect.fn("MemoryStore.archiveStale")(function* (input: {
+    readonly untouchedSince: string;
+  }) {
+    const at = yield* now;
+    const rows = yield* sql<{ readonly id: number; readonly project_id: string | null }>`
+      UPDATE memories SET status = 'archived', updated_at = ${at}
+      WHERE status = 'active' AND origin != 'user' AND pinned = 0
+        AND kind NOT IN ('convention', 'decision', 'architecture')
+        AND MAX(updated_at, COALESCE(last_used_at, '')) < ${input.untouchedSince}
+      RETURNING id, project_id
+    `;
+    for (const row of rows) yield* recordEvent(row.id, row.project_id, "archived", "system", at);
+    return rows.length;
+  });
+
+  const purgeArchived = Effect.fn("MemoryStore.purgeArchived")(function* (input: {
+    readonly archivedBefore: string;
+  }) {
+    const at = yield* now;
+    const rows = yield* sql<{ readonly id: number; readonly project_id: string | null }>`
+      DELETE FROM memories
+      WHERE status = 'archived' AND origin != 'user' AND updated_at < ${input.archivedBefore}
+      RETURNING id, project_id
+    `;
+    for (const row of rows) yield* recordEvent(row.id, row.project_id, "deleted", "system", at);
+    return rows.length;
+  });
+
   const projectIds = Effect.fn("MemoryStore.projectIds")(function* () {
     const rows = yield* sql<{ readonly project_id: string }>`
       SELECT DISTINCT project_id FROM memories WHERE project_id IS NOT NULL
@@ -328,12 +369,13 @@ const make = Effect.gen(function* () {
     readonly projectId: string | null;
     readonly query: string;
     readonly kinds?: ReadonlyArray<MemoryKind>;
+    readonly keepWords?: ReadonlyArray<string>;
     readonly limit: number;
   }) {
-    const match = toFtsQuery(input.query);
+    const match = toFtsQuery(input.query, input.keepWords);
     if (match === null) return [];
-    const rows = yield* sql<MemoryRow>`
-      SELECT m.* FROM memories_fts
+    const rows = yield* sql<MemoryRow & { readonly rank: number }>`
+      SELECT m.*, bm25(memories_fts) AS rank FROM memories_fts
       JOIN memories m ON m.id = memories_fts.rowid
       WHERE memories_fts MATCH ${match}
         AND m.project_id IS ${input.projectId}
@@ -343,11 +385,28 @@ const make = Effect.gen(function* () {
     `;
     const allowed =
       input.kinds === undefined || input.kinds.length === 0 ? null : new Set(input.kinds);
+    // bm25 is lower for better matches; usage, recency and pinning scale the match, not replace it.
+    const at = yield* now;
+    const nowMs = Date.parse(at);
+    const score = (row: MemoryRow & { readonly rank: number }) =>
+      -row.rank *
+      rankFactor({
+        pinned: row.pinned === 1,
+        useCount: row.use_count,
+        lastUsedAt: row.last_used_at,
+        updatedAt: row.updated_at,
+        nowMs,
+      });
     const picked = rows
       .filter((row) => allowed === null || allowed.has(row.kind))
+      .toSorted((left, right) => score(right) - score(left))
       .slice(0, input.limit);
+    // Debug only: why each note ranked where it did, for tuning against real prompts.
+    yield* Effect.logDebug("Memory search", {
+      match,
+      results: picked.map((row) => ({ id: row.id, title: row.title, score: score(row) })),
+    });
     if (picked.length > 0) {
-      const at = yield* now;
       yield* sql`
         UPDATE memories SET use_count = use_count + 1, last_used_at = ${at}
         WHERE ${sql.in(
@@ -390,6 +449,9 @@ const make = Effect.gen(function* () {
       forgetProject(projectId).pipe(Effect.mapError(storeError("forgetProject"))),
     firstAutoCreatedAt: (projectId) =>
       firstAutoCreatedAt(projectId).pipe(Effect.mapError(storeError("firstAutoCreatedAt"))),
+    archiveStale: (input) => archiveStale(input).pipe(Effect.mapError(storeError("archiveStale"))),
+    purgeArchived: (input) =>
+      purgeArchived(input).pipe(Effect.mapError(storeError("purgeArchived"))),
     projectIds: () => projectIds().pipe(Effect.mapError(storeError("projectIds"))),
     list: (input) => list(input).pipe(Effect.mapError(storeError("list"))),
     search: (input) => search(input).pipe(Effect.mapError(storeError("search"))),

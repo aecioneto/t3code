@@ -139,3 +139,63 @@ it.effect("undoing a thread removes what it saved except the user's own notes", 
     assert.equal(indexed[0]?.count, 2);
   }).pipe(Effect.provide(layer)),
 );
+
+it.effect("ranks a used, pinned note above an equal match nobody touched", () =>
+  Effect.gen(function* () {
+    const store = yield* MemoryStore.MemoryStore;
+    const plain = yield* store.create(input("p1", "Deploy staging", "rodar deploy staging"));
+    const pinned = yield* store.create({
+      ...input("p1", "Deploy producao", "rodar deploy producao"),
+      pinned: true,
+    });
+    const found = yield* store.search({ projectId: "p1", query: "deploy", limit: 5 });
+    assert.deepEqual(
+      found.map((memory) => memory.id),
+      [pinned.memory.id, plain.memory.id],
+    );
+  }).pipe(Effect.provide(layer)),
+);
+
+it.effect("generic words in a prompt do not pull in unrelated notes", () =>
+  Effect.gen(function* () {
+    const store = yield* MemoryStore.MemoryStore;
+    yield* store.create(input("p1", "Regra geral", "o time sempre revisa o codigo"));
+    const target = yield* store.create(input("p1", "Forks do sistema", "forks vivem no remoto"));
+    const found = yield* store.search({
+      projectId: "p1",
+      query: "show the current forks of the sistema",
+      limit: 5,
+    });
+    assert.deepEqual(
+      found.map((memory) => memory.id),
+      [target.memory.id],
+    );
+  }).pipe(Effect.provide(layer)),
+);
+
+it.effect(
+  "archives stale automatic notes, keeps the user's, then deletes only what was archived",
+  () =>
+    Effect.gen(function* () {
+      const store = yield* MemoryStore.MemoryStore;
+      const auto = yield* store.create({
+        ...input("p1", "Comando antigo", "rodar x"),
+        kind: "command",
+        origin: "auto",
+      });
+      const mine = yield* store.create({
+        ...input("p1", "Meu comando", "rodar y"),
+        kind: "command",
+      });
+      const rule = yield* store.create({ ...input("p1", "Regra", "sempre z"), origin: "auto" });
+      const future = "2999-01-01T00:00:00.000Z";
+      assert.equal(yield* store.archiveStale({ untouchedSince: future }), 1);
+      assert.equal((yield* store.get(auto.memory.id))?.status, "archived");
+      assert.equal((yield* store.get(mine.memory.id))?.status, "active");
+      assert.equal((yield* store.get(rule.memory.id))?.status, "active");
+      assert.equal(yield* store.purgeArchived({ archivedBefore: "1900-01-01T00:00:00.000Z" }), 0);
+      assert.equal(yield* store.purgeArchived({ archivedBefore: future }), 1);
+      assert.equal(yield* store.get(auto.memory.id), undefined);
+      assert.equal((yield* store.get(mine.memory.id))?.status, "active");
+    }).pipe(Effect.provide(layer)),
+);

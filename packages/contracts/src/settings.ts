@@ -1182,6 +1182,8 @@ export const ServerSettings = Schema.Struct({
   memoryEnabledProjectIds: Schema.Array(Schema.String).pipe(
     Schema.withDecodingDefault(Effect.succeed([])),
   ),
+  /** Beta (fork): words memory search keeps even though they are usually ignored, like "do" or "new". */
+  memoryKeepWords: Schema.Array(Schema.String).pipe(Schema.withDecodingDefault(Effect.succeed([]))),
   /** Beta (fork): model that writes notes from finished turns: `off`, `claude-<model>` or `ollama:<model>`. */
   memoryExtractor: Schema.String.pipe(Schema.withDecodingDefault(Effect.succeed("off"))),
   /**
@@ -1537,6 +1539,7 @@ export const ServerSettingsPatch = Schema.Struct({
   routerEnabled: Schema.optionalKey(Schema.Boolean),
   newThreadWithoutProject: Schema.optionalKey(Schema.Boolean),
   memoryEnabledProjectIds: Schema.optionalKey(Schema.Array(Schema.String)),
+  memoryKeepWords: Schema.optionalKey(Schema.Array(Schema.String)),
   memoryExtractor: Schema.optionalKey(Schema.String),
   linkedEnvironmentsEnabled: Schema.optionalKey(Schema.Boolean),
   backgroundActivity: Schema.optionalKey(

@@ -7,6 +7,7 @@ import * as OrchestrationCommandReceipts from "../persistence/OrchestrationComma
 import * as OrchestrationEventStore from "../persistence/OrchestrationEventStore.ts";
 import * as McpAppModelContext from "../mcpApps/McpAppModelContext.ts";
 import * as MemoryPurge from "../fork/MemoryPurge.ts";
+import * as MemoryRetention from "../fork/MemoryRetention.ts";
 import * as MemoryService from "../fork/MemoryService.ts";
 import * as MemoryStore from "../fork/MemoryStore.ts";
 import * as RouterService from "../fork/RouterService.ts";
@@ -384,6 +385,7 @@ export const layerProduction = Layer.mergeAll(
     Layer.provide(MemoryStore.layerProduction),
     Layer.provide(layerProjectService),
   ),
+  MemoryRetention.layer.pipe(Layer.provide(MemoryStore.layerProduction)),
   GuestShareService.layer.pipe(
     Layer.provide(Layer.merge(layerOrchestratorProvided, layerCommandOutputHubProvided)),
   ),
