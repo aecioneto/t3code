@@ -34,6 +34,22 @@ const callerRoot = Effect.gen(function* () {
   };
 });
 
+const DEFAULT_FIND_LIMIT = 10;
+
+const toSymbol = (symbol: {
+  readonly name: string;
+  readonly kind: string;
+  readonly parent: string | null;
+  readonly line: number;
+  readonly signature: string;
+}) => ({
+  name: symbol.name,
+  kind: symbol.kind,
+  parent: symbol.parent,
+  line: symbol.line,
+  signature: symbol.signature,
+});
+
 export const layer = McpToolAccess.toLayer(CodeToolkit, {
   t3_code_map: McpToolAccess.readsAsCaller((input) =>
     Effect.gen(function* () {
@@ -43,6 +59,36 @@ export const layer = McpToolAccess.toLayer(CodeToolkit, {
         .view({ ...root, ...(input.directory === undefined ? {} : { directory: input.directory }) })
         .pipe(toFailure);
       return { map: view.map, files: view.files, building: view.building };
+    }),
+  ),
+  t3_find_symbol: McpToolAccess.readsAsCaller((input) =>
+    Effect.gen(function* () {
+      const root = yield* callerRoot;
+      const service = yield* CodeMapService.CodeMapService;
+      const found = yield* service
+        .findSymbol({
+          ...root,
+          name: input.name,
+          ...(input.kind === undefined ? {} : { kind: input.kind }),
+          limit: input.limit ?? DEFAULT_FIND_LIMIT,
+        })
+        .pipe(toFailure);
+      return {
+        symbols: found.symbols.map((symbol) => ({ ...toSymbol(symbol), path: symbol.path })),
+        building: found.building,
+      };
+    }),
+  ),
+  t3_file_outline: McpToolAccess.readsAsCaller((input) =>
+    Effect.gen(function* () {
+      const root = yield* callerRoot;
+      const service = yield* CodeMapService.CodeMapService;
+      const outline = yield* service.outline({ ...root, path: input.path }).pipe(toFailure);
+      return {
+        symbols: (outline.symbols ?? []).map(toSymbol),
+        indexed: outline.symbols !== undefined,
+        building: outline.building,
+      };
     }),
   ),
 });

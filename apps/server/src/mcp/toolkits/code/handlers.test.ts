@@ -32,7 +32,10 @@ const unmapped = ProjectId.make("project:code-off");
 const makeRoot = (name: string) => {
   const root = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), `t3-code-tool-${name}-`));
   NodeFS.mkdirSync(NodePath.join(root, "src"));
-  NodeFS.writeFileSync(NodePath.join(root, "src", `${name}.ts`), "export {};");
+  NodeFS.writeFileSync(
+    NodePath.join(root, "src", `${name}.ts`),
+    `export function ${name}Handler(id: string) {\n  return id;\n}\n`,
+  );
   return root;
 };
 
@@ -74,11 +77,12 @@ const callAs = (
   workspaceRoot: string,
   worktreePath: string | null,
   params: object,
+  name: keyof (typeof CodeToolkit)["tools"] = "t3_code_map",
 ) =>
   Effect.gen(function* () {
     const toolkit = yield* CodeToolkit;
     const parts = yield* toolkit
-      .handle("t3_code_map", params as never)
+      .handle(name, params as never)
       .pipe(Stream.unwrap, Stream.runCollect);
     return parts.at(-1)?.result as Readonly<Record<string, unknown>>;
   }).pipe(
@@ -116,6 +120,60 @@ it.effect("refuses a project that did not turn the map on", () =>
     const result = yield* callAs(shared, unmapped, makeRoot("off"), null, {});
     expect(result).toMatchObject({ code: "invalid_request" });
     const escape = yield* callAs(shared, mapped, makeRoot("esc"), null, { directory: "../x" });
+    expect(escape).toMatchObject({ code: "invalid_request" });
+  }).pipe(Effect.scoped),
+);
+
+it.effect("finds a definition and outlines its file for the thread's checkout", () =>
+  Effect.gen(function* () {
+    const context = yield* Layer.build(services);
+    const shared = Layer.succeedContext(context);
+    const main = makeRoot("lookup");
+    const service = yield* Effect.provide(CodeMapService.CodeMapService, shared);
+    yield* service.rebuild({ projectId: mapped, rootPath: main });
+    const found = yield* callAs(
+      shared,
+      mapped,
+      main,
+      null,
+      { name: "lookupHandler" },
+      "t3_find_symbol",
+    );
+    expect(found).toMatchObject({
+      building: false,
+      symbols: [{ name: "lookupHandler", kind: "function", path: "src/lookup.ts", line: 1 }],
+    });
+    const outline = yield* callAs(
+      shared,
+      mapped,
+      main,
+      null,
+      { path: "src/lookup.ts" },
+      "t3_file_outline",
+    );
+    expect(outline).toMatchObject({
+      indexed: true,
+      symbols: [
+        { name: "lookupHandler", line: 1, signature: "export function lookupHandler(id: string)" },
+      ],
+    });
+    const missing = yield* callAs(
+      shared,
+      mapped,
+      main,
+      null,
+      { path: "src/none.ts" },
+      "t3_file_outline",
+    );
+    expect(missing).toMatchObject({ indexed: false, symbols: [] });
+    const escape = yield* callAs(
+      shared,
+      mapped,
+      main,
+      null,
+      { path: "../x.ts" },
+      "t3_file_outline",
+    );
     expect(escape).toMatchObject({ code: "invalid_request" });
   }).pipe(Effect.scoped),
 );
