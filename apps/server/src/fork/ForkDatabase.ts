@@ -10,6 +10,7 @@ import * as ServerConfig from "../config.ts";
 import Migration0001 from "./migrations/001_RouterTables.ts";
 import Migration0002 from "./migrations/002_Memories.ts";
 import Migration0003 from "./migrations/003_WorkspaceFeedback.ts";
+import Migration0004 from "./migrations/004_CodeMap.ts";
 
 // Separate file from statev2.sqlite so the fork's tables never ride along with upstream migrations.
 const runMigrations = Migrator.make({})({
@@ -17,6 +18,7 @@ const runMigrations = Migrator.make({})({
     "1_RouterTables": Migration0001,
     "2_Memories": Migration0002,
     "3_WorkspaceFeedback": Migration0003,
+    "4_CodeMap": Migration0004,
   }),
 });
 

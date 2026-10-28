@@ -34,6 +34,10 @@
     "./memory": {
       "types": "./src/memory.ts",
       "import": "./src/memory.ts"
+    },
+    "./codemap": {
+      "types": "./src/codemap.ts",
+      "import": "./src/codemap.ts"
     }
   },
   "scripts": {

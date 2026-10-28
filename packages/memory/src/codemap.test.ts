@@ -1,0 +1,67 @@
+import { describe, expect, it } from "vite-plus/test";
+import { isSafeRelativePath, languageFor, renderCodeMap, shouldIndex } from "./codemap.ts";
+
+describe("shouldIndex", () => {
+  it("skips secrets, lockfiles, binaries, vendored code and large files", () => {
+    expect(shouldIndex("src/app.ts", 100)).toBe(true);
+    expect(shouldIndex(".env.local", 10)).toBe(false);
+    expect(shouldIndex("config/server.pem", 10)).toBe(false);
+    expect(shouldIndex("pnpm-lock.yaml", 10)).toBe(false);
+    expect(shouldIndex("assets/logo.png", 10)).toBe(false);
+    expect(shouldIndex("web/node_modules/x/index.js", 10)).toBe(false);
+    expect(shouldIndex("src/big.ts", 600 * 1024)).toBe(false);
+  });
+});
+
+describe("paths", () => {
+  it("knows the language and refuses paths that leave the root", () => {
+    expect(languageFor("app/Models/User.php")).toBe("php");
+    expect(languageFor("README")).toBeNull();
+    expect(isSafeRelativePath("src/a.ts")).toBe(true);
+    expect(isSafeRelativePath("../a.ts")).toBe(false);
+    expect(isSafeRelativePath("/etc/passwd")).toBe(false);
+    expect(isSafeRelativePath("a//b.ts")).toBe(false);
+  });
+});
+
+describe("renderCodeMap", () => {
+  const files = [
+    "README.md",
+    "apps/server/src/a.ts",
+    "apps/server/src/b.ts",
+    "apps/web/src/c.tsx",
+    "packages/memory/src/d.ts",
+  ].map((path) => ({ path, language: languageFor(path) }));
+
+  it("lists folders with their file counts and names", () => {
+    const text = renderCodeMap({ files, budgetTokens: 1000 });
+    expect(text).toContain("./ (5): README.md");
+    expect(text).toContain("apps/server/src/ (2): a.ts, b.ts");
+  });
+
+  it("is deterministic regardless of input order", () => {
+    const shuffled = [...files].toReversed();
+    expect(renderCodeMap({ files: shuffled, budgetTokens: 1000 })).toBe(
+      renderCodeMap({ files, budgetTokens: 1000 }),
+    );
+  });
+
+  it("gets shallower to fit the budget and puts focused files first", () => {
+    const wide = Array.from({ length: 40 }, (_, index) => ({
+      path: `src/module${index}/file.ts`,
+      language: "typescript",
+    }));
+    const text = renderCodeMap({ files: wide, budgetTokens: 60 });
+    expect(text.length).toBeLessThanOrEqual(60 * 4);
+    const focused = renderCodeMap({
+      files: [...files, { path: "apps/server/src/z.ts", language: "typescript" }],
+      budgetTokens: 1000,
+      focusPaths: ["apps/server/src/z.ts"],
+    });
+    expect(focused).toContain("apps/server/src/ (3): z.ts, a.ts, b.ts");
+  });
+
+  it("is empty for a project with no files", () => {
+    expect(renderCodeMap({ files: [], budgetTokens: 100 })).toBe("");
+  });
+});
