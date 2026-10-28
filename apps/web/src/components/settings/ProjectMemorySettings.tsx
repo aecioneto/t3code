@@ -5,6 +5,8 @@ import { useState } from "react";
 import { useEnvironmentSettings } from "../../hooks/useSettings";
 import { useProjects } from "../../state/entities";
 import {
+  codeMapRebuild,
+  codeMapStatusQuery,
   memoryCreate,
   memoryDelete,
   memoryListQuery,
@@ -23,6 +25,7 @@ import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../
 import { Switch } from "../ui/switch";
 import { Textarea } from "../ui/textarea";
 import { toastManager } from "../ui/toast";
+import { formatRelativeTimeLabel } from "../../timestampFormat";
 import { SettingsRow } from "./settingsLayout";
 
 const NOTE_PAGE_SIZE = 50;
@@ -117,6 +120,9 @@ function ProjectMemoryRow({
         </div>
       }
     >
+      {codeMapEnabled ? (
+        <CodeMapStatusLine environmentId={project.environmentId} projectId={project.id} />
+      ) : null}
       {open ? (
         <ProjectNotes
           environmentId={project.environmentId}
@@ -125,6 +131,45 @@ function ProjectMemoryRow({
         />
       ) : null}
     </SettingsRow>
+  );
+}
+
+/** What the map holds for the project folder, and a way to scan it again now. */
+function CodeMapStatusLine(props: {
+  readonly environmentId: EnvironmentId;
+  readonly projectId: ProjectId;
+}) {
+  const { environmentId, projectId } = props;
+  const rebuild = useAtomCommand(codeMapRebuild, { reportFailure: false });
+  const query = useEnvironmentQuery(codeMapStatusQuery({ environmentId, input: { projectId } }));
+  const [scanning, setScanning] = useState(false);
+  const status = query.data;
+  const summary =
+    status === undefined || status === null
+      ? "Checking…"
+      : status.building || scanning
+        ? "Scanning…"
+        : status.indexedAt === null
+          ? "Not scanned yet. It scans when an agent first asks for it, or now."
+          : `${status.files} files, scanned ${formatRelativeTimeLabel(status.indexedAt)}. Agents get a refresh after each run that changes files.`;
+
+  const scanNow = async () => {
+    setScanning(true);
+    const result = await rebuild({ environmentId, input: { projectId } });
+    setScanning(false);
+    if (result._tag !== "Success") {
+      toastManager.add({ type: "error", title: "Code map could not be scanned" });
+    }
+    query.refresh();
+  };
+
+  return (
+    <div className="mt-3 flex items-center justify-between gap-3">
+      <p className="text-muted-foreground text-sm">{summary}</p>
+      <Button size="sm" variant="outline" disabled={scanning} onClick={() => void scanNow()}>
+        Scan now
+      </Button>
+    </div>
   );
 }
 

@@ -49,6 +49,7 @@ export function useRouterSuggestion(input: {
     }
   });
 
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- debounce timer: waits for typing to pause before asking the router
   useEffect(() => {
     if (!eligible) return;
     const timer = setTimeout(() => void runClassify(environmentId, key), ROUTER_DEBOUNCE_MS);
